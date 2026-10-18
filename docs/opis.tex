@@ -1,0 +1,76 @@
+\DocumentMetadata{pdfversion=1.4}
+
+\documentclass[12pt, a4paper]{article}
+\usepackage[a4paper, top=2cm, bottom=2cm, left=2cm, right=2cm]{geometry}
+
+\usepackage{fontspec}
+\setmainfont{Source Serif Pro}
+\setmonofont{Iosevka Fixed}
+
+\usepackage{polyglossia}
+\setdefaultlanguage{polish}
+
+\usepackage{microtype}
+\usepackage[]{hyperref}
+\hypersetup{
+  colorlinks=false,
+  pdfborderstyle={/S/U/W 0.5},
+  allbordercolors=black
+}
+
+\author{Kamil J. Hantszel, Aleksander Kała}
+\title{Opis technologiczny projektu}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{Temat projektu}
+\textbf{Ray tracer} — własny silnik renderujący statyczne obrazy korzystający z algorytmu śledzenia promieni, pisany
+w języku C++.
+
+\section{Repozytorium}
+\url{https://github.com/Althorion/cpp-ray-tracer.git}
+
+\section{Opis projektu}
+Celem projektu jest stworzenie własnego silnika renderującego statyczne obrazy przy wykorzystaniu algorytmu śledzenia
+promieni i napisanie go w sposób maksymalizujący wykorzystanie paradygmatu programowania obiektowego.
+
+Program będzie przyjmował z linii komend adres pliku z opisem sceny (we własnym prostym języku opisu), rozdzielczość
+generowanego obrazka i ścieżkę do zapisu wygenerowanego obrazka, po czym wygeneruje i zapisze obrazek.
+
+Grafika generowana będzie w formacie PPM. Możliwe kształty zawarte w renderowanej scenie ograniczone są tylko do kul.
+Implementacja będzie obejmować różne materiały kul, z różnymi parametrami odbijania światła (metal, szkło, plastik).
+
+Program będzie zawierał testy automatyczne, wykonane głównie w technice testów własności (i ewentualnie dodatkowych
+testów jednostkowych). Będzie obsługiwał proste logowanie i obsługę błędów.
+
+\section{Stos technologiczny}
+\begin{itemize}
+  \item \textbf{C++} z wykorzystaniem standardu C++26 (w zakresie obsługiwanym przez wykorzystywane kompilatory).
+  \item \textbf{CMake} — zarządzanie kompilacją.
+  \item \textbf{Clang-Tidy} — linter.
+  \item \textbf{ClangFormat} — formatowanie kodu.
+  \item \textbf{rapidcheck} — testy parametryczne.
+  \item \textbf{pcg-cpp} — szybki generator pseudolosowy.
+\end{itemize}
+
+\section{Podział prac w zespole}
+\begin{itemize}
+  \item \textbf {Kamil J. Hantszel}
+    \begin{itemize}
+      \item Zarządzanie projektem.
+      \item Implementacja głównego algorytmu i struktur danych.
+      \item Testowanie ww.
+      \item Dokumentacja.            
+    \end{itemize}
+  \item \textbf {Aleksander Kała}
+    \begin{itemize}
+      \item CMake
+      \item Obsługa wejścia-wyjścia.
+      \item Logowanie i obsługa błędów, zwłaszcza w I/O.
+      \item Testowanie ww.
+    \end{itemize}
+\end{itemize}
+
+\end{document}
