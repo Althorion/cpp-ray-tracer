@@ -1,0 +1,3 @@
+docs/*
+!docs/*.tex
+!docs/*.pdf
