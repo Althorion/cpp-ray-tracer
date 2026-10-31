@@ -8,6 +8,8 @@
 namespace rt {
 
 /// Half-line `origin + t · direction`, with the direction always of unit length.
+///
+/// Origin and direction are finite by the invariant of `Vector`.
 class Ray {
 public:
 	/// Ray from `origin` along `direction`; the direction need not be normalised.
@@ -21,7 +23,9 @@ public:
 	[[nodiscard]] constexpr const Vec3& direction() const noexcept { return direction_; }
 
 	/// The point at distance `t` from the origin (behind it for negative `t`).
-	[[nodiscard]] constexpr Point3 at(double t) const noexcept { return origin_ + direction_ * t; }
+	///
+	/// @throws MathError if `t` is infinite or NaN, or the point lies beyond the range of `double`.
+	[[nodiscard]] constexpr Point3 at(double t) const { return origin_ + direction_ * t; }
 
 	friend std::ostream& operator<<(std::ostream& stream, const Ray& ray) {
 		return stream << "Ray{origin: " << ray.origin_ << ", direction: " << ray.direction_ << '}';

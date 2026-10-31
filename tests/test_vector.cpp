@@ -3,12 +3,15 @@
 
 #include <rapidcheck/Assertions.h>
 
+#include <cmath>
 #include <concepts>
 #include <cstddef>
 #include <format>
+#include <limits>
 #include <sstream>
 #include <string>
 #include <type_traits>
+#include <utility>
 
 #include "generators.hpp"
 #include "harness.hpp"
@@ -24,11 +27,20 @@ static_assert(Vec3{1, 2, 3} + Vec3{4, 5, 6} == Vec3{5, 7, 9});
 static_assert(cross(Vec3::unit_x(), Vec3::unit_y()) == Vec3::unit_z(), "the coordinate system is right-handed");
 static_assert(!std::is_convertible_v<double, Vector<double, 1>>, "a one-dimensional vector is not a scalar");
 static_assert(std::is_trivially_copyable_v<Vec3>);
+static_assert(!std::is_assignable_v<decltype(std::declval<Vec3&>()[0]), double>, "components change only through set");
 
 template <typename V>
 concept has_cross = requires(V v) { cross(v, v); };
 static_assert(has_cross<Vec3>);
 static_assert(!has_cross<Vector<double, 2>>);
+
+/// Vector whose component `index` is `value` and all others are 1.
+template <std::floating_point T, std::size_t N>
+[[nodiscard]] Vector<T, N> with_component(std::size_t index, T value) {
+	return [&]<std::size_t... Indices>(std::index_sequence<Indices...>) {
+		return Vector<T, N>{(Indices == index ? value : T{1})...};
+	}(std::make_index_sequence<N>{});
+}
 
 template <std::floating_point T, std::size_t N>
 void check_arithmetic(Suite& suite, const std::string& label) {
@@ -87,6 +99,78 @@ void check_arithmetic(Suite& suite, const std::string& label) {
 
 	suite.check(label + ": normalising the zero vector throws MathError",
 	            [] { RC_ASSERT_THROWS_AS(static_cast<void>(V::zero().normalised()), MathError); });
+
+	suite.check(label + ": length and normalised are accurate at any scale", [] {
+		// `v` is `base` scaled by 2^exponent, anywhere from the subnormal range to near the largest finite value.
+		const V base = *nonzero_vector<T, N>();
+		const int exponent = *scaling_exponent<T>();
+		const V v = base * std::ldexp(T{1}, exponent);
+		// Only exact scalings (no component rounded in the subnormal range) keep the direction of `base`.
+		const T undo_first = std::ldexp(T{1}, -exponent / 2);
+		const T undo_second = std::ldexp(T{1}, -exponent - (-exponent / 2));
+		RC_PRE(v * undo_first * undo_second == base);
+		// A subnormal length cannot be more precise than the spacing of subnormal numbers.
+		const T expected = base.length() * std::ldexp(T{1}, exponent);
+		const T spacing = std::numeric_limits<T>::denorm_min();
+		RC_ASSERT(std::abs(v.length() - expected) <= default_eps<T> * expected + 2 * spacing);
+		RC_ASSERT(approx_equal(v.normalised(), base.normalised()));
+	});
+}
+
+template <std::floating_point T, std::size_t N>
+void check_finiteness(Suite& suite, const std::string& label) {
+	using V = Vector<T, N>;
+
+	suite.check(label + ": a non-finite component throws MathError", [] {
+		const auto index = *component_index<N>();
+		const T value = *non_finite_scalar<T>();
+		RC_ASSERT_THROWS_AS(static_cast<void>(with_component<T, N>(index, value)), MathError);
+	});
+
+	suite.check(label + ": set changes exactly one component", [](const V& v) {
+		const auto index = *component_index<N>();
+		const T value = *finite_scalar<T>();
+		V changed{v};
+		changed.set(index, value);
+		for (std::size_t i = 0; i < N; ++i) {
+			RC_ASSERT(changed[i] == (i == index ? value : v[i]));
+		}
+	});
+
+	suite.check(label + ": setting a non-finite component throws MathError and keeps the vector", [](const V& v) {
+		const auto index = *component_index<N>();
+		V changed{v};
+		RC_ASSERT_THROWS_AS(changed.set(index, *non_finite_scalar<T>()), MathError);
+		RC_ASSERT(changed == v);
+	});
+
+	suite.check(label + ": a non-finite scalar throws MathError and keeps the vector", [](const V& v) {
+		const T scalar = *non_finite_scalar<T>();
+		V changed{v};
+		RC_ASSERT_THROWS_AS(changed *= scalar, MathError);
+		RC_ASSERT_THROWS_AS(changed /= scalar, MathError);
+		RC_ASSERT(changed == v);
+		RC_ASSERT_THROWS_AS(static_cast<void>(scalar * v), MathError);
+	});
+
+	suite.check(label + ": division by zero throws MathError and keeps the vector", [](const V& v) {
+		V changed{v};
+		RC_ASSERT_THROWS_AS(changed /= T{0}, MathError);
+		RC_ASSERT_THROWS_AS(changed /= V::zero(), MathError);
+		RC_ASSERT(changed == v);
+	});
+
+	suite.check(label + ": overflow throws MathError and keeps the vector", [] {
+		const auto index = *component_index<N>();
+		const V huge = with_component<T, N>(index, std::numeric_limits<T>::max());
+		V changed{huge};
+		RC_ASSERT_THROWS_AS(changed += huge, MathError);
+		RC_ASSERT_THROWS_AS(changed *= huge, MathError);
+		RC_ASSERT_THROWS_AS(changed *= T{2}, MathError);
+		RC_ASSERT_THROWS_AS(changed -= -huge, MathError);
+		RC_ASSERT_THROWS_AS(changed /= T{0.5}, MathError);
+		RC_ASSERT(changed == huge);
+	});
 }
 
 template <std::floating_point T>
@@ -108,6 +192,11 @@ void check_cross(Suite& suite, const std::string& label) {
 		const T s = *finite_scalar<T>();
 		RC_ASSERT(approx_equal(cross(a, a * s), V::zero(), tolerance(a.length_squared() * std::abs(s))));
 	});
+
+	suite.check(label + ": an overflowing cross product throws MathError", [] {
+		const T huge = std::numeric_limits<T>::max();
+		RC_ASSERT_THROWS_AS(static_cast<void>(cross(V(huge, 0, 0), V(0, huge, 0))), MathError);
+	});
 }
 
 void check_examples(Suite& suite) {
@@ -116,7 +205,7 @@ void check_examples(Suite& suite) {
 		RC_ASSERT(v[0] == 1.0);
 		RC_ASSERT(v[1] == 2.0);
 		RC_ASSERT(v[2] == 3.0);
-		v[1] = 5.0;
+		v.set(1, 5.0);
 		RC_ASSERT(v == Vec3(1, 5, 3));
 	});
 
@@ -158,6 +247,9 @@ int main() {
 	rt::test::check_arithmetic<double, 3>(suite, "Vec3");
 	rt::test::check_arithmetic<double, 2>(suite, "Vector<double, 2>");
 	rt::test::check_arithmetic<float, 3>(suite, "Vector<float, 3>");
+	rt::test::check_finiteness<double, 3>(suite, "Vec3");
+	rt::test::check_finiteness<double, 2>(suite, "Vector<double, 2>");
+	rt::test::check_finiteness<float, 3>(suite, "Vector<float, 3>");
 	rt::test::check_cross<double>(suite, "Vec3");
 	rt::test::check_cross<float>(suite, "Vector<float, 3>");
 	return suite.exit_code();

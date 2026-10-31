@@ -323,13 +323,20 @@ docs/
 **Matematyka**
 
 - `template <std::floating_point T, std::size_t N> class Vector` — prywatna tablica `std::array<T, N>`; operatory
-  `+ − * /` (wektor–wektor i wektor–skalar), `+= −= *= /=`, unarny `−`, `==`, `operator[]`; funkcje `dot`, `cross`
-  (tylko `N == 3`, przez `requires`), `length`, `length_squared`, `normalised()` (rzuca `MathError` dla wektora
-  zerowego); statyczne fabryki `zero()`, `unit_x()` itd.; `operator<<` i `std::formatter`.
+  `+ − * /` (wektor–wektor i wektor–skalar), `+= −= *= /=`, unarny `−`, `==`, `operator[]` (tylko odczyt) i `set(i,
+  x)`; funkcje `dot`, `cross` (tylko `N == 3`, przez `requires`), `length`, `length_squared`, `normalised()` (rzuca
+  `MathError` dla wektora zerowego); statyczne fabryki `zero()`, `unit_x()` itd.; `operator<<` i `std::formatter`.
+  Niezmiennik: wszystkie składowe są skończone (bez nieskończoności i NaN). Sprawdzają go konstruktor, `set` oraz
+  każda operacja, której wynik mógłby go złamać (przepełnienie, dzielenie przez zero, skalar nieskończony lub NaN);
+  naruszenie rzuca `MathError`, a operacje złożone (`+=` itd.) nie zmieniają wtedy wektora. `length` i `normalised`
+  są odporne na przepełnienie i niedomiar (poprawne także dla składowych rzędu `1e300` i `1e-300`); `dot`
+  i `length_squared` zwracają skalar, więc mogą dać nieskończoność.
   Aliasy: `using Vec3 = Vector<double, 3>; using Point3 = Vec3;`.
 - `template <std::floating_point T> class Interval` — `min`, `max`, `contains`, `surrounds`, `clamp`; statyczne stałe
   `empty()` i `universe()`.
-- `class Ray` — `origin`, `direction` (niezmiennik: znormalizowany, ustalany w konstruktorze), `at(t)`.
+- `class Ray` — `origin`, `direction` (niezmiennik: znormalizowany, ustalany w konstruktorze), `at(t)`. Początek
+  i kierunek są skończone na mocy niezmiennika `Vector`; `at(t)` rzuca `MathError` dla nieskończonego lub NaN `t`
+  (oraz gdy wynik się przepełnia).
 - `class Colour` — składowe `r, g, b ≥ 0` (niezmiennik sprawdzany w konstruktorze); kompozycja `Vec3`; operatory
   `+ * /` (kolor–kolor po składowych i kolor–skalar), `==`; `gamma_corrected()`, `quantised()` →
   `std::array<std::uint8_t, 3>`; stałe statyczne `black()`, `white()`.
@@ -469,9 +476,13 @@ Każdy wyjątek ma konstruktor przyjmujący opis i (gdzie ma to sens) dane konte
 
 - Dodawanie jest przemienne i (z dokładnością `eps`) łączne; `v − v == 0`; `(a + b) · s ≈ a·s + b·s`.
 - `dot` symetryczny; `cross(a, b)` prostopadły do `a` i `b`; `cross(a, b) ≈ −cross(b, a)`.
-- `‖normalised(v)‖ ≈ 1` dla niezerowego `v`; `normalised(0)` rzuca `MathError`.
+- `‖normalised(v)‖ ≈ 1` dla niezerowego `v`, także bardzo małego i bardzo dużego; `normalised(0)` rzuca `MathError`.
+- Wektor z nieskończoną lub NaN składową (z konstruktora albo `set`) rzuca `MathError`; operacja o nieskończonym
+  lub NaN wyniku (przepełnienie, dzielenie przez zero, skalar nieskończony) rzuca `MathError` i nie zmienia
+  argumentu.
 - `Interval::clamp(x)` zawsze w przedziale; `contains(clamp(x))`.
-- `‖ray.at(t) − origin‖ ≈ |t|`; `Ray` z zerowym kierunkiem rzuca wyjątek.
+- `‖ray.at(t) − origin‖ ≈ |t|`; `Ray` z zerowym kierunkiem rzuca wyjątek; `ray.at(t)` dla nieskończonego lub NaN
+  `t` rzuca `MathError`.
 - `quantised` jest monotoniczne po składowych i zawsze w `[0, 255]`; `gamma_corrected` monotoniczne.
 - Kolor z ujemną składową rzuca wyjątek.
 
@@ -593,9 +604,9 @@ Każdy wyjątek ma konstruktor przyjmujący opis i (gdzie ma to sens) dane konte
 |                                  | `Image`, `Camera`); `Sampler` ukrywa `pcg32`                                      |
 | Enkapsulacja (dane + operacje)   | `Vector`, `Image`, `Camera`, `Scene`, `Logger` — operacje na danych tylko przez   |
 |                                  | metody                                                                            |
-| Konstruktory                     | Walidujące (`Ray`, `Sphere`, `Colour`, `Camera`, `RenderSettings`), domyślne,     |
-|                                  | kopiujące/przenoszące (`Vector`, `Image`), `explicit`, `constexpr`, delegujące,   |
-|                                  | usunięte z powodem (`Scene`, `Logger`, `WorkerPool`)                              |
+| Konstruktory                     | Walidujące (`Vector`, `Ray`, `Sphere`, `Colour`, `Camera`, `RenderSettings`),     |
+|                                  | domyślne, kopiujące/przenoszące (`Vector`, `Image`), `explicit`, `constexpr`,     |
+|                                  | delegujące, usunięte z powodem (`Scene`, `Logger`, `WorkerPool`)                  |
 | Dziedziczenie pojedyncze         | `Sphere : IHittable`, `Metal/Glass/Lambertian : Material`,                        |
 |                                  | `StderrSink/FileSink : StreamSink`, hierarchia wyjątków                           |
 | Dziedziczenie wielokrotne        | `Material : IScatterer, INamed` (interfejsy);                                     |
