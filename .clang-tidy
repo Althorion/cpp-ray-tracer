@@ -1,0 +1,72 @@
+# Static analysis rules for the ray tracer (README.md § 10). Every disabled check carries its reason.
+---
+Checks: >
+  -*,
+  bugprone-*,
+  clang-analyzer-*,
+  concurrency-*,
+  cppcoreguidelines-*,
+  misc-*,
+  modernize-*,
+  performance-*,
+  portability-*,
+  readability-*,
+  -bugprone-easily-swappable-parameters,
+  -cppcoreguidelines-avoid-magic-numbers,
+  -readability-magic-numbers,
+  -cppcoreguidelines-pro-bounds-avoid-unchecked-container-access,
+  -modernize-use-trailing-return-type,
+  -readability-identifier-length,
+  -readability-math-missing-parentheses
+
+# Reasons for the exclusions above:
+# - bugprone-easily-swappable-parameters: maths functions naturally take several doubles or vectors in a row.
+# - *-magic-numbers: rendering maths is full of meaningful literals (0.5, 255, 1e-3) that names would only obscure.
+# - cppcoreguidelines-pro-bounds-avoid-unchecked-container-access: flags every `operator[]`
+# - modernize-use-trailing-return-type: style preference; classic return types read better IMO.
+# - readability-identifier-length: `x`, `t`, `u`, `v`, `n` are the conventional names in geometry code.
+# - readability-math-missing-parentheses: would demand parentheses in every `a + b * c` formula.
+
+WarningsAsErrors: ''
+HeaderFilterRegex: '/(include|src|tests)/'
+ExcludeHeaderFilterRegex: '/_deps/'
+SystemHeaders: false
+FormatStyle: file
+
+CheckOptions:
+  # Naming (README.md § 2)
+  readability-identifier-naming.NamespaceCase: lower_case
+  readability-identifier-naming.ClassCase: CamelCase
+  readability-identifier-naming.StructCase: CamelCase
+  readability-identifier-naming.UnionCase: CamelCase
+  readability-identifier-naming.EnumCase: CamelCase
+  readability-identifier-naming.EnumConstantCase: lower_case
+  readability-identifier-naming.TypeAliasCase: CamelCase
+  readability-identifier-naming.TypedefCase: CamelCase
+  readability-identifier-naming.TemplateParameterCase: CamelCase
+  readability-identifier-naming.ConceptCase: lower_case
+  readability-identifier-naming.FunctionCase: lower_case
+  readability-identifier-naming.MethodCase: lower_case
+  readability-identifier-naming.VariableCase: lower_case
+  readability-identifier-naming.ParameterCase: lower_case
+  readability-identifier-naming.ConstexprVariableCase: lower_case
+  readability-identifier-naming.GlobalConstantCase: lower_case
+  readability-identifier-naming.PublicMemberCase: lower_case
+  readability-identifier-naming.ProtectedMemberCase: lower_case
+  readability-identifier-naming.ProtectedMemberSuffix: '_'
+  readability-identifier-naming.PrivateMemberCase: lower_case
+  readability-identifier-naming.PrivateMemberSuffix: '_'
+  readability-identifier-naming.MacroDefinitionCase: UPPER_CASE
+  readability-identifier-naming.IgnoreMainLikeFunctions: true
+
+  # Plain data structs (`HitRecord`, `Options`, `RenderSettings`) may expose their fields
+  misc-non-private-member-variables-in-classes.IgnoreClassesWithAllMemberVariablesBeingPublic: true
+  cppcoreguidelines-non-private-member-variables-in-classes.IgnoreClassesWithAllMemberVariablesBeingPublic: true
+
+  # Interfaces declare only a virtual destructor; don't demand the full rule of five there
+  cppcoreguidelines-special-member-functions.AllowSoleDefaultDtor: true
+
+  readability-function-cognitive-complexity.Threshold: 25
+  readability-function-cognitive-complexity.IgnoreMacros: true
+  readability-implicit-bool-conversion.AllowPointerConditions: true
+...
