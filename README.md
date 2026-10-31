@@ -53,7 +53,15 @@ zbieranie wielu błędów składni naraz.
   // End:
   ```
 - Układ współrzędnych: prawoskrętny, oś Y w górę. Piksel `(0, 0)` to lewy górny róg obrazu.
-- Typ zmiennoprzecinkowy: `double` (szablony dopuszczają dowolny `std::floating_point`).
+- Typ zmiennoprzecinkowy: `double` (szablony dopuszczają dowolny `std::floating_point`). Uzasadnienie:
+  - Przejście na `float` nie przyniosłoby istotnego przyspieszenia dzięki SIMD. Projekt nie stosuje układu
+    „struktury tablic” (_structure of arrays_, SoA): promienie przetwarzane są pojedynczo, a `Vec3` przechowuje
+    trzy składowe w jednej tablicy (układ „tablicy struktur”). Wektoryzacja obejmuje więc co najwyżej składowe
+    jednego wektora (3 z 4 pól rejestru niezależnie od typu), a czas renderowania zdominowany jest przez wywołania
+    wirtualne, rozgałęzienia materiałów i generator liczb losowych.
+  - `float` pogarsza dokładność tam, gdzie jest ona istotna: równanie kwadratowe dla bardzo dużej kuli podłoża
+    (znoszenie się składników rzędu 10⁶), stały próg `t ≥ 0.001` przy odległych trafieniach, zakres `[0, 1)`
+    generatora (zaokrąglenie do `1.0f`) oraz sumowanie wielu próbek na piksel.
 
 ## 3. Stos technologiczny i budowanie
 
