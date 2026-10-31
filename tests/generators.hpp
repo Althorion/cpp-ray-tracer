@@ -1,6 +1,7 @@
 #ifndef RT_TESTS_GENERATORS_HPP
 #define RT_TESTS_GENERATORS_HPP
 
+#include "rt/colour.hpp"
 #include "rt/maths/interval.hpp"
 #include "rt/maths/ray.hpp"
 #include "rt/maths/vector.hpp"
@@ -99,9 +100,43 @@ template <std::floating_point T>
 	return rc::gen::construct<Ray>(finite_vector<double, 3>(), nonzero_vector<double, 3>());
 }
 
+/// Number in `(0, coordinate_bound)`.
+[[nodiscard]] inline rc::Gen<double> positive_scalar() {
+	return rc::gen::suchThat(rc::gen::map(finite_scalar<double>(), [](double value) { return std::abs(value); }),
+	                         [](double value) { return value > 0.0; });
+}
+
+/// Number of samples averaged into one pixel in the tests.
+[[nodiscard]] inline rc::Gen<int> sample_count() { return rc::gen::inRange(1, 101); }
+
+/// Colour channel in `[0, 1]`, with both ends generated often.
+[[nodiscard]] inline rc::Gen<double> unit_channel() {
+	return rc::gen::weightedOneOf<double>({
+			{8, rc::gen::map(finite_scalar<double>(), [](double value) { return std::fmod(std::abs(value), 1.0); })},
+			{1, rc::gen::just(0.0)},
+			{1, rc::gen::just(1.0)},
+	});
+}
+
+/// Colour with components in `[0, 1]`, such as an albedo or a sky colour.
+[[nodiscard]] inline rc::Gen<Colour> unit_colour() {
+	return rc::gen::construct<Colour>(unit_channel(), unit_channel(), unit_channel());
+}
+
+/// Colour with components in `[0, coordinate_bound)`, such as accumulated light before averaging.
+[[nodiscard]] inline rc::Gen<Colour> bright_colour() {
+	const auto channel = rc::gen::map(finite_scalar<double>(), [](double value) { return std::abs(value); });
+	return rc::gen::construct<Colour>(channel, channel, channel);
+}
+
 } // namespace rt::test
 
 namespace rc {
+
+template <>
+struct Arbitrary<rt::Colour> {
+	static Gen<rt::Colour> arbitrary() { return rt::test::unit_colour(); }
+};
 
 template <>
 struct Arbitrary<rt::Ray> {

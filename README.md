@@ -275,7 +275,8 @@ Iteracyjnie (bez rekurencji), z wagą przepływu `throughput`, początkowo `(1, 
 ### 6.4. Piksel i obraz
 
 - Kolor piksela = średnia z `samples` próbek.
-- Korekcja gamma 2 (`sqrt` składowych), przycięcie do `[0, 0.999]`, kwantyzacja `⌊256 · c⌋` → `[0, 255]`.
+- Korekcja gamma 2 (`sqrt` składowych), przycięcie do `[0, 1)`, tj. do największej liczby mniejszej od 1
+  (`std::nextafter(1.0, 0.0)`), kwantyzacja `⌊256 · c⌋` → `[0, 255]`.
 - Plik wyjściowy: `P3`, `width height`, `255`, następnie piksele wierszami od góry, jeden piksel na wiersz
   (`r g b`).
 
