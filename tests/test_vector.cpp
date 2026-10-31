@@ -3,7 +3,6 @@
 
 #include <rapidcheck/Assertions.h>
 
-#include <algorithm>
 #include <concepts>
 #include <cstddef>
 #include <format>
@@ -30,12 +29,6 @@ template <typename V>
 concept has_cross = requires(V v) { cross(v, v); };
 static_assert(has_cross<Vec3>);
 static_assert(!has_cross<Vector<double, 2>>);
-
-/// Tolerance for results whose rounding error is proportional to `scale`, the magnitude of the inputs.
-template <std::floating_point T>
-[[nodiscard]] T tolerance(T scale) {
-	return default_eps<T> * std::max(T{1}, scale);
-}
 
 template <std::floating_point T, std::size_t N>
 void check_arithmetic(Suite& suite, const std::string& label) {

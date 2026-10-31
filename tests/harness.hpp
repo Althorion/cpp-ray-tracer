@@ -37,6 +37,12 @@ inline constexpr T default_eps = T{1e-9};
 template <>
 inline constexpr float default_eps<float> = 1e-5F;
 
+/// Tolerance for results whose rounding error is proportional to `scale`, the magnitude of the inputs.
+template <std::floating_point T>
+[[nodiscard]] T tolerance(T scale) {
+	return default_eps<T> * std::max(T{1}, scale);
+}
+
 /// Equality within `eps`, absolute for values up to 1 in magnitude and relative above that.
 template <std::floating_point T>
 [[nodiscard]] bool approx_equal(T a, T b, T eps = default_eps<T>) {

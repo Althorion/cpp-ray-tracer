@@ -2,6 +2,7 @@
 #define RT_TESTS_GENERATORS_HPP
 
 #include "rt/math/interval.hpp"
+#include "rt/math/ray.hpp"
 #include "rt/math/vector.hpp"
 
 #include <rapidcheck.h>
@@ -73,9 +74,19 @@ template <std::floating_point T>
 	});
 }
 
+/// Ray with a finite origin and a direction that is not (numerically) zero.
+[[nodiscard]] inline rc::Gen<Ray> any_ray() {
+	return rc::gen::construct<Ray>(finite_vector<double, 3>(), nonzero_vector<double, 3>());
+}
+
 } // namespace rt::test
 
 namespace rc {
+
+template <>
+struct Arbitrary<rt::Ray> {
+	static Gen<rt::Ray> arbitrary() { return rt::test::any_ray(); }
+};
 
 template <std::floating_point T>
 struct Arbitrary<rt::Interval<T>> {
