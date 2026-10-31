@@ -1,0 +1,83 @@
+# Formatting rules for the ray tracer. Mirrors .editorconfig: tabs of width 2, 120 columns, LF, final newline.
+---
+Language: Cpp
+BasedOnStyle: LLVM
+Standard: Latest
+
+# Layout (.editorconfig)
+ColumnLimit: 120
+IndentWidth: 2
+TabWidth: 2
+UseTab: AlignWithSpaces # tabs for indentation, spaces for alignment
+ContinuationIndentWidth: 4
+LineEnding: LF
+InsertNewlineAtEOF: true
+KeepEmptyLines:
+  AtEndOfFile: false
+  AtStartOfBlock: false
+  AtStartOfFile: false
+MaxEmptyLinesToKeep: 1
+
+# Braces: always on the same line as the statement they open
+BreakBeforeBraces: Attach
+Cpp11BracedListStyle: true
+
+# Conciseness: allow short constructs to stay on one line
+AllowShortBlocksOnASingleLine: Empty
+AllowShortCaseLabelsOnASingleLine: true
+AllowShortEnumsOnASingleLine: true
+AllowShortFunctionsOnASingleLine: All
+AllowShortIfStatementsOnASingleLine: WithoutElse
+AllowShortLambdasOnASingleLine: All
+AllowShortLoopsOnASingleLine: true
+AllowShortCompoundRequirementOnASingleLine: true
+PackConstructorInitializers: NextLine
+BinPackArguments: true
+BinPackParameters: BinPack
+
+# Classes and namespaces
+AccessModifierOffset: -2 # `public:` flush with `class`
+EmptyLineBeforeAccessModifier: LogicalBlock
+EmptyLineAfterAccessModifier: Never
+NamespaceIndentation: None
+FixNamespaceComments: true
+CompactNamespaces: false
+BreakConstructorInitializers: BeforeColon
+BreakInheritanceList: BeforeColon
+
+# Templates and concepts
+BreakTemplateDeclarations: Yes
+RequiresClausePosition: OwnLine
+IndentRequiresClause: true
+SpaceAfterTemplateKeyword: true
+
+# Alignment
+PointerAlignment: Left # `const Ray& ray`, `T* ptr`
+ReferenceAlignment: Pointer
+AlignAfterOpenBracket: Align
+AlignOperands: Align
+AlignTrailingComments:
+  Kind: Always
+  OverEmptyLines: 0
+AlignConsecutiveAssignments: None
+AlignConsecutiveDeclarations: None
+AlignConsecutiveMacros: Consecutive
+
+# Comments: never reflow, so the Emacs `Local Variables:` blocks stay intact
+ReflowComments: Never
+
+# Includes: own headers, then third-party, then the standard library
+SortIncludes:
+  Enabled: true
+  IgnoreCase: false
+IncludeBlocks: Regroup
+IncludeCategories:
+  - Regex: '^"rt/'
+    Priority: 1
+  - Regex: '^<(pcg_[a-z_]+|rapidcheck)(/.*)?(\.h|\.hpp)?>$'
+    Priority: 2
+  - Regex: '^<[a-z_]+>$' # <vector>, <format>, …
+    Priority: 3
+  - Regex: '.*'
+    Priority: 4
+...
