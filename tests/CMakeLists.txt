@@ -14,6 +14,7 @@ function(rt_add_test name)
 endfunction()
 
 rt_add_test(test_vector)
+rt_add_test(test_interval)
 
 # Local Variables:
 # ispell-local-dictionary: "en-GB"
