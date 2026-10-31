@@ -1,5 +1,5 @@
-#ifndef RT_MATH_INTERVAL_HPP
-#define RT_MATH_INTERVAL_HPP
+#ifndef RT_MATHS_INTERVAL_HPP
+#define RT_MATHS_INTERVAL_HPP
 
 #include "rt/errors.hpp"
 
@@ -19,10 +19,10 @@ public:
 	/// Empty interval.
 	constexpr Interval() noexcept = default;
 
-	/// @throws MathError if either bound is NaN.
+	/// @throws MathsError if either bound is NaN.
 	constexpr Interval(T min, T max) : min_{min}, max_{max} {
 		if (std::isnan(min) || std::isnan(max)) {
-			throw MathError{"interval bounds must not be NaN"};
+			throw MathsError{"interval bounds must not be NaN"};
 		}
 	}
 
@@ -48,10 +48,10 @@ public:
 
 	/// The point of the interval nearest to `x`; a NaN stays NaN.
 	///
-	/// @throws MathError if the interval is empty.
+	/// @throws MathsError if the interval is empty.
 	[[nodiscard]] constexpr T clamp(T x) const {
 		if (is_empty()) {
-			throw MathError{"cannot clamp to an empty interval"};
+			throw MathsError{"cannot clamp to an empty interval"};
 		}
 		if (x < min_) {
 			return min_;
@@ -77,7 +77,7 @@ private:
 
 } // namespace rt
 
-#endif // RT_MATH_INTERVAL_HPP
+#endif // RT_MATHS_INTERVAL_HPP
 
 // Local Variables:
 // ispell-local-dictionary: "en-GB"

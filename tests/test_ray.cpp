@@ -1,6 +1,6 @@
 #include "rt/errors.hpp"
-#include "rt/math/ray.hpp"
-#include "rt/math/vector.hpp"
+#include "rt/maths/ray.hpp"
+#include "rt/maths/vector.hpp"
 
 #include <rapidcheck/Assertions.h>
 
@@ -51,12 +51,12 @@ void check_properties(Suite& suite) {
 		RC_ASSERT(approx_equal(ray.at(t) - ray.at(s), ray.direction() * (t - s), tolerance(scale)));
 	});
 
-	suite.check("a non-finite t throws MathError", [](const Ray& ray) {
-		RC_ASSERT_THROWS_AS(static_cast<void>(ray.at(*non_finite_scalar<double>())), MathError);
+	suite.check("a non-finite t throws MathsError", [](const Ray& ray) {
+		RC_ASSERT_THROWS_AS(static_cast<void>(ray.at(*non_finite_scalar<double>())), MathsError);
 	});
 
-	suite.check("a zero direction throws MathError",
-	            [](const Point3& origin) { RC_ASSERT_THROWS_AS(Ray(origin, Vec3::zero()), MathError); });
+	suite.check("a zero direction throws MathsError",
+	            [](const Point3& origin) { RC_ASSERT_THROWS_AS(Ray(origin, Vec3::zero()), MathsError); });
 }
 
 void check_examples(Suite& suite) {
@@ -68,10 +68,10 @@ void check_examples(Suite& suite) {
 		RC_ASSERT(ray.at(-1.0) == Point3(1, 2, 2));
 	});
 
-	suite.check("a point beyond the range of double throws MathError", [] {
+	suite.check("a point beyond the range of double throws MathsError", [] {
 		constexpr double huge = std::numeric_limits<double>::max();
 		const Ray ray{Point3{huge, 0, 0}, Vec3::unit_x()};
-		RC_ASSERT_THROWS_AS(static_cast<void>(ray.at(huge)), MathError);
+		RC_ASSERT_THROWS_AS(static_cast<void>(ray.at(huge)), MathsError);
 	});
 
 	suite.check("stream output", [] {

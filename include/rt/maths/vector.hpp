@@ -1,5 +1,5 @@
-#ifndef RT_MATH_VECTOR_HPP
-#define RT_MATH_VECTOR_HPP
+#ifndef RT_MATHS_VECTOR_HPP
+#define RT_MATHS_VECTOR_HPP
 
 #include "rt/errors.hpp"
 
@@ -20,7 +20,7 @@ namespace rt {
 /// Components are stored together in one array (array-of-structures layout), see README.md § 2.
 ///
 /// Invariant: every component is finite. Each operation that could produce an infinite or NaN component throws
-/// `MathError` instead, leaving its operands unchanged.
+/// `MathsError` instead, leaving its operands unchanged.
 template <std::floating_point T, std::size_t N>
 	requires(N > 0)
 class Vector {
@@ -30,7 +30,7 @@ public:
 
 	/// Vector with the given components, one per dimension.
 	///
-	/// @throws MathError if a component is infinite or NaN (after conversion to `T`).
+	/// @throws MathsError if a component is infinite or NaN (after conversion to `T`).
 	template <std::convertible_to<T>... Args>
 		requires(sizeof...(Args) == N)
 	constexpr explicit(N == 1) Vector(Args... components) : components_{static_cast<T>(components)...} {
@@ -65,7 +65,7 @@ public:
 	/// Read-only access; use `set` to change a component.
 	[[nodiscard]] constexpr const T& operator[](std::size_t index) const noexcept { return components_[index]; }
 
-	/// @throws MathError if `value` is infinite or NaN.
+	/// @throws MathsError if `value` is infinite or NaN.
 	constexpr void set(std::size_t index, T value) {
 		require_finite(value, "vector components must be finite");
 		components_[index] = value;
@@ -78,10 +78,10 @@ public:
 	constexpr Vector& operator*=(const Vector& rhs) { return combine(rhs, std::multiplies{}); }
 	constexpr Vector& operator/=(const Vector& rhs) { return combine(rhs, std::divides{}); }
 
-	/// @throws MathError if `scalar` is infinite or NaN, or the product overflows.
+	/// @throws MathsError if `scalar` is infinite or NaN, or the product overflows.
 	constexpr Vector& operator*=(T scalar) { return combine(scalar, std::multiplies{}); }
 
-	/// @throws MathError if `scalar` is zero, infinite or NaN, or the quotient overflows.
+	/// @throws MathsError if `scalar` is zero, infinite or NaN, or the quotient overflows.
 	constexpr Vector& operator/=(T scalar) { return combine(scalar, std::divides{}); }
 
 	[[nodiscard]] constexpr Vector operator-() const noexcept {
@@ -137,7 +137,7 @@ public:
 		return std::inner_product(lhs.components_.begin(), lhs.components_.end(), rhs.components_.begin(), T{0});
 	}
 
-	/// @throws MathError if the result overflows.
+	/// @throws MathsError if the result overflows.
 	[[nodiscard]] friend constexpr Vector cross(const Vector& lhs, const Vector& rhs)
 		requires(N == 3)
 	{
@@ -170,7 +170,7 @@ public:
 
 	/// Unit vector with the same direction; accurate for any non-zero vector, however long or short.
 	///
-	/// @throws MathError if the vector is zero.
+	/// @throws MathsError if the vector is zero.
 	[[nodiscard]] constexpr Vector normalised() const {
 		const T squared = length_squared();
 		if (std::isnormal(squared)) {
@@ -179,7 +179,7 @@ public:
 		// `squared` overflowed or (nearly) underflowed: rescale first, so that the length lies in [1, sqrt(N)].
 		const T largest = max_magnitude();
 		if (largest == T{0}) {
-			throw MathError{"cannot normalise a zero-length vector"};
+			throw MathsError{"cannot normalise a zero-length vector"};
 		}
 		const Vector scaled = *this / largest;
 		return scaled / std::sqrt(scaled.length_squared());
@@ -205,7 +205,7 @@ private:
 
 	static constexpr void require_finite(T value, const char* message) {
 		if (!std::isfinite(value)) {
-			throw MathError{message};
+			throw MathsError{message};
 		}
 	}
 
@@ -283,7 +283,7 @@ private:
 	std::formatter<T, CharT> component_;
 };
 
-#endif // RT_MATH_VECTOR_HPP
+#endif // RT_MATHS_VECTOR_HPP
 
 // Local Variables:
 // ispell-local-dictionary: "en-GB"

@@ -7,7 +7,7 @@ namespace rt {
 
 Error::Error(const std::string& message) : std::runtime_error{message} {}
 
-MathError::MathError(const std::string& message) : Error{message} {}
+MathsError::MathsError(const std::string& message) : Error{message} {}
 
 } // namespace rt
 

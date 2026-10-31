@@ -1,7 +1,7 @@
-#ifndef RT_MATH_RAY_HPP
-#define RT_MATH_RAY_HPP
+#ifndef RT_MATHS_RAY_HPP
+#define RT_MATHS_RAY_HPP
 
-#include "rt/math/vector.hpp"
+#include "rt/maths/vector.hpp"
 
 #include <ostream>
 
@@ -14,7 +14,7 @@ class Ray {
 public:
 	/// Ray from `origin` along `direction`; the direction need not be normalised.
 	///
-	/// @throws MathError if `direction` is the zero vector.
+	/// @throws MathsError if `direction` is the zero vector.
 	constexpr Ray(const Point3& origin, const Vec3& direction) : origin_{origin}, direction_{direction.normalised()} {}
 
 	[[nodiscard]] constexpr const Point3& origin() const noexcept { return origin_; }
@@ -24,7 +24,7 @@ public:
 
 	/// The point at distance `t` from the origin (behind it for negative `t`).
 	///
-	/// @throws MathError if `t` is infinite or NaN, or the point lies beyond the range of `double`.
+	/// @throws MathsError if `t` is infinite or NaN, or the point lies beyond the range of `double`.
 	[[nodiscard]] constexpr Point3 at(double t) const { return origin_ + direction_ * t; }
 
 	friend std::ostream& operator<<(std::ostream& stream, const Ray& ray) {
@@ -38,7 +38,7 @@ private:
 
 } // namespace rt
 
-#endif // RT_MATH_RAY_HPP
+#endif // RT_MATHS_RAY_HPP
 
 // Local Variables:
 // ispell-local-dictionary: "en-GB"

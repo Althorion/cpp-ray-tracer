@@ -13,9 +13,9 @@ public:
 };
 
 /// A mathematical operation was applied outside its domain, e.g. normalising a zero vector.
-class MathError : public Error {
+class MathsError : public Error {
 public:
-	explicit MathError(const std::string& message);
+	explicit MathsError(const std::string& message);
 };
 
 } // namespace rt

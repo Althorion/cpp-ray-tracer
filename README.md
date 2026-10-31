@@ -29,10 +29,11 @@ zbieranie wielu błędów składni naraz.
 ## 2. Konwencje
 
 - **Dokumentacja** (ten plik, `docs/`): język polski.
-- **Kod** (identyfikatory, komentarze, komunikaty programu, komunikaty commitów): język angielski w **odmianie
-  brytyjskiej z końcówkami „-ise”**: `Colour`, `normalise`, `normalised()`, `centre`, `initialise`, `serialise`,
-  `quantise`, `Tokeniser`, `behaviour`, `optimise`. Wyjątkiem są wyłącznie nazwy narzucone przez bibliotekę
-  standardową i biblioteki zewnętrzne.
+- **Kod** (identyfikatory, nazwy plików i katalogów, komentarze, komunikaty programu, komunikaty commitów): język
+  angielski w **odmianie brytyjskiej z końcówkami „-ise”**: `Colour`, `normalise`, `normalised()`, `centre`,
+  `initialise`, `serialise`, `quantise`, `Tokeniser`, `behaviour`, `optimise`, `maths/`, `MathsError`. Wyjątkiem są
+  wyłącznie nazwy narzucone przez bibliotekę standardową, biblioteki zewnętrzne i narzędzia (np. `std::numeric_limits`,
+  `-fsanitize`, nazwy reguł clang-tidy), gdy wymaga tego współpraca z nimi.
 - Przestrzeń nazw: `rt` (testy: `rt::test`).
 - Nazewnictwo (wymuszane przez `readability-identifier-naming` w `.clang-tidy`):
   - `PascalCase`: klasy, struktury, wyliczenia, aliasy typów, parametry szablonów (`Vector<T, N>`, `Vec3`);
@@ -300,7 +301,7 @@ a wyjątek jest ponownie rzucany w wątku wywołującym. Postęp (liczba ukończ
 CMakeLists.txt  CMakePresets.json  .clang-tidy  .clang-format
 cmake/                 # Dependencies.cmake (FetchContent), Warnings.cmake
 include/rt/
-  math/                vector.hpp interval.hpp ray.hpp
+  maths/               vector.hpp interval.hpp ray.hpp
   colour.hpp
   random/              sampler.hpp
   geometry/            hittable.hpp hit_record.hpp sphere.hpp
@@ -325,17 +326,17 @@ docs/
 - `template <std::floating_point T, std::size_t N> class Vector` — prywatna tablica `std::array<T, N>`; operatory
   `+ − * /` (wektor–wektor i wektor–skalar), `+= −= *= /=`, unarny `−`, `==`, `operator[]` (tylko odczyt) i `set(i,
   x)`; funkcje `dot`, `cross` (tylko `N == 3`, przez `requires`), `length`, `length_squared`, `normalised()` (rzuca
-  `MathError` dla wektora zerowego); statyczne fabryki `zero()`, `unit_x()` itd.; `operator<<` i `std::formatter`.
+  `MathsError` dla wektora zerowego); statyczne fabryki `zero()`, `unit_x()` itd.; `operator<<` i `std::formatter`.
   Niezmiennik: wszystkie składowe są skończone (bez nieskończoności i NaN). Sprawdzają go konstruktor, `set` oraz
   każda operacja, której wynik mógłby go złamać (przepełnienie, dzielenie przez zero, skalar nieskończony lub NaN);
-  naruszenie rzuca `MathError`, a operacje złożone (`+=` itd.) nie zmieniają wtedy wektora. `length` i `normalised`
+  naruszenie rzuca `MathsError`, a operacje złożone (`+=` itd.) nie zmieniają wtedy wektora. `length` i `normalised`
   są odporne na przepełnienie i niedomiar (poprawne także dla składowych rzędu `1e300` i `1e-300`); `dot`
   i `length_squared` zwracają skalar, więc mogą dać nieskończoność.
   Aliasy: `using Vec3 = Vector<double, 3>; using Point3 = Vec3;`.
 - `template <std::floating_point T> class Interval` — `min`, `max`, `contains`, `surrounds`, `clamp`; statyczne stałe
   `empty()` i `universe()`.
 - `class Ray` — `origin`, `direction` (niezmiennik: znormalizowany, ustalany w konstruktorze), `at(t)`. Początek
-  i kierunek są skończone na mocy niezmiennika `Vector`; `at(t)` rzuca `MathError` dla nieskończonego lub NaN `t`
+  i kierunek są skończone na mocy niezmiennika `Vector`; `at(t)` rzuca `MathsError` dla nieskończonego lub NaN `t`
   (oraz gdy wynik się przepełnia).
 - `class Colour` — składowe `r, g, b ≥ 0` (niezmiennik sprawdzany w konstruktorze); kompozycja `Vec3`; operatory
   `+ * /` (kolor–kolor po składowych i kolor–skalar), `==`; `gamma_corrected()`, `quantised()` →
@@ -435,7 +436,7 @@ std::runtime_error
 └── rt::Error                      (klasa bazowa wszystkich wyjątków projektu)
     ├── rt::CliError
     ├── rt::IoError                (ścieżka pliku)
-    ├── rt::MathError
+    ├── rt::MathsError
     ├── rt::RangeError
     └── rt::SceneError
         ├── rt::SceneParseError    (plik, wiersz, kolumna)
@@ -476,13 +477,13 @@ Każdy wyjątek ma konstruktor przyjmujący opis i (gdzie ma to sens) dane konte
 
 - Dodawanie jest przemienne i (z dokładnością `eps`) łączne; `v − v == 0`; `(a + b) · s ≈ a·s + b·s`.
 - `dot` symetryczny; `cross(a, b)` prostopadły do `a` i `b`; `cross(a, b) ≈ −cross(b, a)`.
-- `‖normalised(v)‖ ≈ 1` dla niezerowego `v`, także bardzo małego i bardzo dużego; `normalised(0)` rzuca `MathError`.
-- Wektor z nieskończoną lub NaN składową (z konstruktora albo `set`) rzuca `MathError`; operacja o nieskończonym
-  lub NaN wyniku (przepełnienie, dzielenie przez zero, skalar nieskończony) rzuca `MathError` i nie zmienia
+- `‖normalised(v)‖ ≈ 1` dla niezerowego `v`, także bardzo małego i bardzo dużego; `normalised(0)` rzuca `MathsError`.
+- Wektor z nieskończoną lub NaN składową (z konstruktora albo `set`) rzuca `MathsError`; operacja o nieskończonym
+  lub NaN wyniku (przepełnienie, dzielenie przez zero, skalar nieskończony) rzuca `MathsError` i nie zmienia
   argumentu.
 - `Interval::clamp(x)` zawsze w przedziale; `contains(clamp(x))`.
 - `‖ray.at(t) − origin‖ ≈ |t|`; `Ray` z zerowym kierunkiem rzuca wyjątek; `ray.at(t)` dla nieskończonego lub NaN
-  `t` rzuca `MathError`.
+  `t` rzuca `MathsError`.
 - `quantised` jest monotoniczne po składowych i zawsze w `[0, 255]`; `gamma_corrected` monotoniczne.
 - Kolor z ujemną składową rzuca wyjątek.
 

@@ -1,7 +1,7 @@
 #ifndef RT_TESTS_HARNESS_HPP
 #define RT_TESTS_HARNESS_HPP
 
-#include "rt/math/vector.hpp"
+#include "rt/maths/vector.hpp"
 
 #include <rapidcheck.h>
 

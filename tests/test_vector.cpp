@@ -1,5 +1,5 @@
 #include "rt/errors.hpp"
-#include "rt/math/vector.hpp"
+#include "rt/maths/vector.hpp"
 
 #include <rapidcheck/Assertions.h>
 
@@ -97,8 +97,8 @@ void check_arithmetic(Suite& suite, const std::string& label) {
 		RC_ASSERT(approx_equal(v.normalised() * v.length(), v, tolerance(v.length())));
 	});
 
-	suite.check(label + ": normalising the zero vector throws MathError",
-	            [] { RC_ASSERT_THROWS_AS(static_cast<void>(V::zero().normalised()), MathError); });
+	suite.check(label + ": normalising the zero vector throws MathsError",
+	            [] { RC_ASSERT_THROWS_AS(static_cast<void>(V::zero().normalised()), MathsError); });
 
 	suite.check(label + ": length and normalised are accurate at any scale", [] {
 		// `v` is `base` scaled by 2^exponent, anywhere from the subnormal range to near the largest finite value.
@@ -121,10 +121,10 @@ template <std::floating_point T, std::size_t N>
 void check_finiteness(Suite& suite, const std::string& label) {
 	using V = Vector<T, N>;
 
-	suite.check(label + ": a non-finite component throws MathError", [] {
+	suite.check(label + ": a non-finite component throws MathsError", [] {
 		const auto index = *component_index<N>();
 		const T value = *non_finite_scalar<T>();
-		RC_ASSERT_THROWS_AS(static_cast<void>(with_component<T, N>(index, value)), MathError);
+		RC_ASSERT_THROWS_AS(static_cast<void>(with_component<T, N>(index, value)), MathsError);
 	});
 
 	suite.check(label + ": set changes exactly one component", [](const V& v) {
@@ -137,38 +137,38 @@ void check_finiteness(Suite& suite, const std::string& label) {
 		}
 	});
 
-	suite.check(label + ": setting a non-finite component throws MathError and keeps the vector", [](const V& v) {
+	suite.check(label + ": setting a non-finite component throws MathsError and keeps the vector", [](const V& v) {
 		const auto index = *component_index<N>();
 		V changed{v};
-		RC_ASSERT_THROWS_AS(changed.set(index, *non_finite_scalar<T>()), MathError);
+		RC_ASSERT_THROWS_AS(changed.set(index, *non_finite_scalar<T>()), MathsError);
 		RC_ASSERT(changed == v);
 	});
 
-	suite.check(label + ": a non-finite scalar throws MathError and keeps the vector", [](const V& v) {
+	suite.check(label + ": a non-finite scalar throws MathsError and keeps the vector", [](const V& v) {
 		const T scalar = *non_finite_scalar<T>();
 		V changed{v};
-		RC_ASSERT_THROWS_AS(changed *= scalar, MathError);
-		RC_ASSERT_THROWS_AS(changed /= scalar, MathError);
+		RC_ASSERT_THROWS_AS(changed *= scalar, MathsError);
+		RC_ASSERT_THROWS_AS(changed /= scalar, MathsError);
 		RC_ASSERT(changed == v);
-		RC_ASSERT_THROWS_AS(static_cast<void>(scalar * v), MathError);
+		RC_ASSERT_THROWS_AS(static_cast<void>(scalar * v), MathsError);
 	});
 
-	suite.check(label + ": division by zero throws MathError and keeps the vector", [](const V& v) {
+	suite.check(label + ": division by zero throws MathsError and keeps the vector", [](const V& v) {
 		V changed{v};
-		RC_ASSERT_THROWS_AS(changed /= T{0}, MathError);
-		RC_ASSERT_THROWS_AS(changed /= V::zero(), MathError);
+		RC_ASSERT_THROWS_AS(changed /= T{0}, MathsError);
+		RC_ASSERT_THROWS_AS(changed /= V::zero(), MathsError);
 		RC_ASSERT(changed == v);
 	});
 
-	suite.check(label + ": overflow throws MathError and keeps the vector", [] {
+	suite.check(label + ": overflow throws MathsError and keeps the vector", [] {
 		const auto index = *component_index<N>();
 		const V huge = with_component<T, N>(index, std::numeric_limits<T>::max());
 		V changed{huge};
-		RC_ASSERT_THROWS_AS(changed += huge, MathError);
-		RC_ASSERT_THROWS_AS(changed *= huge, MathError);
-		RC_ASSERT_THROWS_AS(changed *= T{2}, MathError);
-		RC_ASSERT_THROWS_AS(changed -= -huge, MathError);
-		RC_ASSERT_THROWS_AS(changed /= T{0.5}, MathError);
+		RC_ASSERT_THROWS_AS(changed += huge, MathsError);
+		RC_ASSERT_THROWS_AS(changed *= huge, MathsError);
+		RC_ASSERT_THROWS_AS(changed *= T{2}, MathsError);
+		RC_ASSERT_THROWS_AS(changed -= -huge, MathsError);
+		RC_ASSERT_THROWS_AS(changed /= T{0.5}, MathsError);
 		RC_ASSERT(changed == huge);
 	});
 }
@@ -193,9 +193,9 @@ void check_cross(Suite& suite, const std::string& label) {
 		RC_ASSERT(approx_equal(cross(a, a * s), V::zero(), tolerance(a.length_squared() * std::abs(s))));
 	});
 
-	suite.check(label + ": an overflowing cross product throws MathError", [] {
+	suite.check(label + ": an overflowing cross product throws MathsError", [] {
 		const T huge = std::numeric_limits<T>::max();
-		RC_ASSERT_THROWS_AS(static_cast<void>(cross(V(huge, 0, 0), V(0, huge, 0))), MathError);
+		RC_ASSERT_THROWS_AS(static_cast<void>(cross(V(huge, 0, 0), V(0, huge, 0))), MathsError);
 	});
 }
 

@@ -1,9 +1,9 @@
 #ifndef RT_TESTS_GENERATORS_HPP
 #define RT_TESTS_GENERATORS_HPP
 
-#include "rt/math/interval.hpp"
-#include "rt/math/ray.hpp"
-#include "rt/math/vector.hpp"
+#include "rt/maths/interval.hpp"
+#include "rt/maths/ray.hpp"
+#include "rt/maths/vector.hpp"
 
 #include <rapidcheck.h>
 

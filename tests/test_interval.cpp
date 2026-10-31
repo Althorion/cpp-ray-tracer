@@ -1,5 +1,5 @@
 #include "rt/errors.hpp"
-#include "rt/math/interval.hpp"
+#include "rt/maths/interval.hpp"
 
 #include <rapidcheck/Assertions.h>
 
@@ -86,8 +86,8 @@ void check_properties(Suite& suite, const std::string& label) {
 	suite.check(label + ": the empty constant contains nothing",
 	            [] { RC_ASSERT(!I::empty().contains(*extended_scalar<T>())); });
 
-	suite.check(label + ": clamping to an empty interval throws MathError",
-	            [] { RC_ASSERT_THROWS_AS(static_cast<void>(I::empty().clamp(*extended_scalar<T>())), MathError); });
+	suite.check(label + ": clamping to an empty interval throws MathsError",
+	            [] { RC_ASSERT_THROWS_AS(static_cast<void>(I::empty().clamp(*extended_scalar<T>())), MathsError); });
 }
 
 void check_examples(Suite& suite) {
@@ -118,9 +118,9 @@ void check_examples(Suite& suite) {
 		RC_ASSERT(!Interval<double>::universe().surrounds(infinity));
 	});
 
-	suite.check("NaN bounds throw MathError", [] {
-		RC_ASSERT_THROWS_AS(Interval(nan, 1.0), MathError);
-		RC_ASSERT_THROWS_AS(Interval(0.0, nan), MathError);
+	suite.check("NaN bounds throw MathsError", [] {
+		RC_ASSERT_THROWS_AS(Interval(nan, 1.0), MathsError);
+		RC_ASSERT_THROWS_AS(Interval(0.0, nan), MathsError);
 	});
 
 	suite.check("NaN is in no interval and clamps to NaN", [] {
