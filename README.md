@@ -34,9 +34,12 @@ zbieranie wielu błędów składni naraz.
   `quantise`, `Tokeniser`, `behaviour`, `optimise`. Wyjątkiem są wyłącznie nazwy narzucone przez bibliotekę
   standardową i biblioteki zewnętrzne.
 - Przestrzeń nazw: `rt` (testy: `rt::test`).
-- Nazewnictwo: typy `PascalCase`, funkcje i zmienne `snake_case`, składowe prywatne z sufiksem `_`, stałe
-  `k_snake_case` lub `constexpr` w `snake_case` — ostateczną formę wymusza konfiguracja clang-tidy
-  (`readability-identifier-naming`).
+- Nazewnictwo (wymuszane przez `readability-identifier-naming` w `.clang-tidy`):
+  - `PascalCase`: klasy, struktury, wyliczenia, aliasy typów, parametry szablonów (`Vector<T, N>`, `Vec3`);
+  - `snake_case`: przestrzenie nazw, funkcje, metody, zmienne, parametry, koncepty, wartości wyliczeń
+    (`LogLevel::debug`), pola publiczne struktur oraz stałe, także `constexpr` (bez przedrostka `k_`);
+  - składowe prywatne i chronione: `snake_case` z sufiksem `_` (`components_`);
+  - makra: `UPPER_CASE`.
 - Formatowanie: clang-format, wcięcia tabulatorami (zgodnie z `.editorconfig`).
 - Każdy plik kończy się blokiem zmiennych lokalnych Emacsa (w składni komentarza danego języka), ustawiającym co
   najmniej `ispell-local-dictionary`: `"en-GB"` dla kodu i tekstów angielskich, `"pl-PL"` dla dokumentacji po polsku.
