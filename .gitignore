@@ -1,3 +1,13 @@
 docs/*
 !docs/*.tex
 !docs/*.pdf
+
+.*
+!.gitignore
+!.editorconfig
+!.clang-tidy
+!.clang-format
+!.latexmkrc
+
+# graft's local graph cache — regenerable, not committed (run `graft build`).
+/graft/
