@@ -41,9 +41,11 @@ zbieranie wielu błędów składni naraz.
   - składowe prywatne i chronione: `snake_case` z sufiksem `_` (`components_`);
   - makra: `UPPER_CASE`.
 - Formatowanie: clang-format, wcięcia tabulatorami (zgodnie z `.editorconfig`).
-- Każdy plik kończy się blokiem zmiennych lokalnych Emacsa (w składni komentarza danego języka), ustawiającym co
-  najmniej `ispell-local-dictionary`: `"en-GB"` dla kodu i tekstów angielskich, `"pl-PL"` dla dokumentacji po polsku.
-  Przykład dla C++:
+- Każdy plik z kodem (źródła, nagłówki, testy, skrypty CMake) i z dokumentacją przeznaczoną dla ludzi kończy się
+  blokiem zmiennych lokalnych Emacsa (w składni komentarza danego języka), ustawiającym co najmniej
+  `ispell-local-dictionary`: `"en-GB"` dla kodu i tekstów angielskich, `"pl-PL"` dla dokumentacji po polsku. Pliki
+  konfiguracyjne (`.clang-format`, `.clang-tidy`, `.editorconfig`, `.gitignore`, `CMakePresets.json` itp.) nie mają
+  tego bloku. Przykład dla C++:
 
   ```cpp
   // Local Variables:
