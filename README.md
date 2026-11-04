@@ -359,10 +359,16 @@ docs/
 - Interfejs `IHittable` — `virtual std::optional<HitRecord> hit(const Ray&, Interval<double>) const = 0;`
   wirtualny destruktor.
 - `struct HitRecord` — `point`, `normal` (zawsze przeciwny do promienia), `t`, `front_face`,
-  `const Material*`.
+  `const Material*`. Tworzony przez statyczną fabrykę `from_outward_normal(ray, t, outward_normal, material)`,
+  która normalizuje normalną i odwraca ją, gdy promień nadchodzi od wewnątrz (promień styczny liczy się jako
+  wewnętrzny); `Material` jest tu jedynie zadeklarowany zawczasu.
 - `class Sphere final : public IHittable` — `centre`, `radius` (> 0, sprawdzane w konstruktorze), materiał
   przechowywany jako `std::shared_ptr<const Material>` (**agregacja** — materiał żyje niezależnie od kuli i może być
   współdzielony); statyczny licznik utworzonych kul (`Sphere::instance_count()`), używany w logach.
+  Promień nieskończony, NaN lub `≤ 0` → `MathsError`; licznik zlicza konstrukcje z parametrów (bez kopii)
+  i jest atomowy. `hit` zwraca bliższy pierwiastek z przedziału, a gdy ten wypada poza przedział — dalszy;
+  obie różnice kwadratów liczone są jako iloczyny `(a − b)(a + b)`, a bliższy pierwiastek z iloczynu
+  pierwiastków, co chroni dokładność dla dużych kul (np. podłoża).
 
 **Materiały**
 

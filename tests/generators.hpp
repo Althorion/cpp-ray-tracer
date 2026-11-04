@@ -2,6 +2,7 @@
 #define RT_TESTS_GENERATORS_HPP
 
 #include "rt/colour.hpp"
+#include "rt/geometry/sphere.hpp"
 #include "rt/maths/interval.hpp"
 #include "rt/maths/ray.hpp"
 #include "rt/maths/vector.hpp"
@@ -15,6 +16,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <limits>
+#include <memory>
 #include <utility>
 
 namespace rt::test {
@@ -131,6 +133,27 @@ template <std::floating_point T>
 	return rc::gen::construct<Colour>(channel, channel, channel);
 }
 
+/// Radius of a test sphere, in `[1e-3, coordinate_bound)`: a sphere much smaller than its distance from the origin
+/// would collapse to a point once its coordinates are rounded, and nothing can be said about where it is hit.
+[[nodiscard]] inline rc::Gen<double> sphere_radius() {
+	return rc::gen::map(positive_scalar(), [](double value) { return std::max(value, 1e-3); });
+}
+
+/// Radius a sphere must reject: negative, zero, infinite or NaN.
+[[nodiscard]] inline rc::Gen<double> invalid_radius() {
+	return rc::gen::weightedOneOf<double>({
+			{1, rc::gen::map(positive_scalar(), [](double value) { return -value; })},
+			{1, rc::gen::just(0.0)},
+			{1, non_finite_scalar<double>()},
+	});
+}
+
+/// Sphere without a material, with a finite centre and a `sphere_radius`.
+[[nodiscard]] inline rc::Gen<Sphere> any_sphere() {
+	return rc::gen::construct<Sphere>(finite_vector<double, 3>(), sphere_radius(),
+	                                  rc::gen::just(std::shared_ptr<const Material>{}));
+}
+
 /// Bound of a sampling range: usually a moderate number, now and then an extreme one (the largest or the smallest
 /// finite magnitude, or zero).
 template <std::floating_point T>
@@ -161,6 +184,11 @@ template <std::floating_point T>
 } // namespace rt::test
 
 namespace rc {
+
+template <>
+struct Arbitrary<rt::Sphere> {
+	static Gen<rt::Sphere> arbitrary() { return rt::test::any_sphere(); }
+};
 
 template <>
 struct Arbitrary<rt::Sampler> {

@@ -18,6 +18,8 @@ rt_add_test(test_interval)
 rt_add_test(test_ray)
 rt_add_test(test_colour)
 rt_add_test(test_sampler)
+rt_add_test(test_hittable)
+rt_add_test(test_sphere)
 
 # Local Variables:
 # ispell-local-dictionary: "en-GB"
