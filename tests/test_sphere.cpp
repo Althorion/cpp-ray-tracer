@@ -2,6 +2,7 @@
 #include "rt/geometry/hit_record.hpp"
 #include "rt/geometry/hittable.hpp"
 #include "rt/geometry/sphere.hpp"
+#include "rt/materials/material.hpp"
 #include "rt/maths/interval.hpp"
 #include "rt/maths/ray.hpp"
 #include "rt/maths/vector.hpp"
@@ -120,22 +121,22 @@ void check_properties(Suite& suite) {
 	            [](const Sphere& sphere, const Ray& ray) { RC_ASSERT(!sphere.hit(ray, Interval<double>::empty())); });
 
 	suite.check("a radius that is not finite and positive throws MathsError", [](const Point3& centre) {
-		RC_ASSERT_THROWS_AS(Sphere(centre, *invalid_radius(), nullptr), MathsError);
+		RC_ASSERT_THROWS_AS(Sphere(centre, *not_finite_positive(), placeholder_material()), MathsError);
 	});
 
 	suite.check("every construction is counted, failed ones and copies are not", [](const Sphere& sphere) {
 		const std::size_t before = Sphere::instance_count();
-		const Sphere constructed{sphere.centre(), sphere.radius(), nullptr};
+		const Sphere constructed{sphere.centre(), sphere.radius(), sphere.material()};
 		RC_ASSERT(Sphere::instance_count() == before + 1);
 		const auto copy = std::make_unique<Sphere>(constructed);
-		RC_ASSERT_THROWS_AS(Sphere(sphere.centre(), -sphere.radius(), nullptr), MathsError);
+		RC_ASSERT_THROWS_AS(Sphere(sphere.centre(), -sphere.radius(), sphere.material()), MathsError);
 		RC_ASSERT(Sphere::instance_count() == before + 1);
 		RC_ASSERT(copy->radius() == constructed.radius());
 	});
 }
 
 /// The unit sphere five units down the negative z axis, in front of a camera at the origin.
-[[nodiscard]] Sphere example_sphere() { return Sphere{Point3{0, 0, -5}, 1, nullptr}; }
+[[nodiscard]] Sphere example_sphere() { return Sphere{Point3{0, 0, -5}, 1, placeholder_material()}; }
 
 void check_examples(Suite& suite) {
 	suite.check("a ray from outside along the axis", [] {
@@ -146,7 +147,7 @@ void check_examples(Suite& suite) {
 		RC_ASSERT(record->point == Point3(0, 0, -4));
 		RC_ASSERT(record->normal == Vec3::unit_z());
 		RC_ASSERT(record->front_face);
-		RC_ASSERT(record->material == nullptr);
+		RC_ASSERT(record->material == sphere.material().get());
 	});
 
 	suite.check("a ray from the centre hits from the inside", [] {
@@ -182,18 +183,25 @@ void check_examples(Suite& suite) {
 	});
 
 	suite.check("a ray barely above a huge ground sphere", [] {
-		const Sphere ground{Point3{0, -1000, 0}, 1000, nullptr};
+		const Sphere ground{Point3{0, -1000, 0}, 1000, placeholder_material()};
 		const auto record = ground.hit(Ray{Point3{0, 1e-3, 0}, -Vec3::unit_y()}, Interval{1e-6, infinity});
 		RC_ASSERT(record.has_value());
 		RC_ASSERT(approx_equal(record->t, 1e-3, 1e-10));
 		RC_ASSERT(record->front_face);
 	});
 
-	suite.check("hits carry the sphere's material", [] {
-		const Sphere bare{Point3{}, 1, nullptr};
-		RC_ASSERT(bare.material() == nullptr);
-		RC_ASSERT(bare.hit(Ray{Point3{0, 0, 5}, -Vec3::unit_z()}, Interval{0.001, infinity})->material == nullptr);
+	suite.check("spheres share their material, and hits carry it", [] {
+		const std::shared_ptr<const Material> material = placeholder_material();
+		const Sphere first{Point3{}, 1, material};
+		const Sphere second{Point3{5, 0, 0}, 2, material};
+		RC_ASSERT(first.material() == material);
+		RC_ASSERT(second.material() == material);
+		RC_ASSERT(material.use_count() == 3);
+		RC_ASSERT(first.hit(Ray{Point3{0, 0, 5}, -Vec3::unit_z()}, Interval{0.001, infinity})->material == material.get());
 	});
+
+	suite.check("a sphere without a material throws Error",
+	            [] { RC_ASSERT_THROWS_AS(Sphere(Point3{}, 1, nullptr), Error); });
 }
 
 } // namespace

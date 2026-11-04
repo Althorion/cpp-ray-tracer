@@ -25,15 +25,16 @@ class Material;
 class Sphere final : public IHittable {
 public:
 	/// @throws MathsError if `radius` is not a finite, positive number.
+	/// @throws Error if `material` is null.
 	Sphere(const Point3& centre, double radius, std::shared_ptr<const Material> material)
-			: centre_{centre}, radius_{validated_radius(radius)}, material_{std::move(material)} {
+			: centre_{centre}, radius_{validated_radius(radius)}, material_{validated_material(std::move(material))} {
 		constructed.fetch_add(1, std::memory_order_relaxed);
 	}
 
 	[[nodiscard]] const Point3& centre() const noexcept { return centre_; }
 	[[nodiscard]] double radius() const noexcept { return radius_; }
 
-	/// Shared with every other user of the material (aggregation: the material outlives none of them in particular).
+	/// Never null; shared with every other user of the material (aggregation).
 	[[nodiscard]] const std::shared_ptr<const Material>& material() const noexcept { return material_; }
 
 	/// Number of spheres constructed so far by the constructor above (copies are not counted).
@@ -84,6 +85,13 @@ private:
 			throw MathsError{"the radius of a sphere must be finite and positive"};
 		}
 		return radius;
+	}
+
+	[[nodiscard]] static std::shared_ptr<const Material> validated_material(std::shared_ptr<const Material> material) {
+		if (material == nullptr) {
+			throw Error{"a sphere must have a material"};
+		}
+		return material;
 	}
 };
 

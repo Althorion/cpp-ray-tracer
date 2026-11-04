@@ -197,6 +197,9 @@ Parametr pełni dwie role:
    `R₀ = ((1 − n) / (1 + n))²`, `R(θ) = R₀ + (1 − R₀) · (1 − cos θ)⁵`.
 
    Dla `n = 1.5` powierzchnia oglądana prostopadle odbija ok. 4% światła, a przy kątach ślizgowych — prawie 100%.
+   Wyjątkiem jest `n = 1`: granicy ośrodków wtedy nie ma, więc `R(θ) = 0` dla każdego kąta (wzór Schlicka dawałby
+   `(1 − cos θ)⁵`). Odpowiada to dokładnym równaniom Fresnela, według których odbicie przy kącie ślizgowym dąży do 1
+   dla każdego `n ≠ 1`, a dla `n = 1` znika — nieciągłość jest fizyczna.
    W `plastic` jest to jedyna rola `ior`: opisuje on przezroczystą powłokę, od której promień odbija się lustrzanie
    z prawdopodobieństwem `R(θ)`, a w pozostałych przypadkach rozprasza się jak na podłożu lambertowskim. Większy
    `ior` daje bardziej błyszczący plastik; domyślne `1.5` odpowiada typowym tworzywom i lakierom.
@@ -364,10 +367,10 @@ docs/
   wewnętrzny); `Material` jest tu jedynie zadeklarowany zawczasu.
 - `class Sphere final : public IHittable` — `centre`, `radius` (> 0, sprawdzane w konstruktorze), materiał
   przechowywany jako `std::shared_ptr<const Material>` (**agregacja** — materiał żyje niezależnie od kuli i może być
-  współdzielony); statyczny licznik utworzonych kul (`Sphere::instance_count()`), używany w logach.
-  Promień nieskończony, NaN lub `≤ 0` → `MathsError`; licznik zlicza konstrukcje z parametrów (bez kopii)
-  i jest atomowy. `hit` zwraca bliższy pierwiastek z przedziału, a gdy ten wypada poza przedział — dalszy;
-  obie różnice kwadratów liczone są jako iloczyny `(a − b)(a + b)`, a bliższy pierwiastek z iloczynu
+  współdzielony; pusty wskaźnik → `Error`); statyczny licznik utworzonych kul (`Sphere::instance_count()`),
+  używany w logach. Promień nieskończony, NaN lub `≤ 0` → `MathsError`; licznik zlicza konstrukcje z parametrów
+  (bez kopii) i jest atomowy. `hit` zwraca bliższy pierwiastek z przedziału, a gdy ten wypada poza przedział —
+  dalszy; obie różnice kwadratów liczone są jako iloczyny `(a − b)(a + b)`, a bliższy pierwiastek z iloczynu
   pierwiastków, co chroni dokładność dla dużych kul (np. podłoża).
 
 **Materiały**
@@ -376,12 +379,15 @@ docs/
   (`Scatter` = rozproszony promień + tłumienie).
 - Interfejs `INamed` — `virtual std::string_view name() const = 0;`
 - Klasa abstrakcyjna `Material : public IScatterer, public INamed` (**wielodziedziczenie interfejsów**) —
-  przechowuje nazwę (prywatnie), implementuje `name()`, `scatter` pozostaje czysto wirtualne.
+  przechowuje nazwę (prywatnie), implementuje `name()`, `scatter` pozostaje czysto wirtualne. Pusta nazwa → `Error`
+  (wyłącznie zabezpieczenie: parser nie powinien jej przepuścić, bo identyfikator ma co najmniej jeden znak).
+  Parametry materiałów są sprawdzane w konstruktorach i rzucają `MathsError`: albedo o składowej `> 1`, `fuzz`
+  spoza `[0, 1]`, `ior` nieskończony, NaN lub `≤ 0`.
 - `Lambertian : public Material`, `Metal final : public Material`, `Glass final : public Material` — nadpisują
   `scatter` (`override`).
 - `class SpecularCoat` — klasa domieszkowa (nie jest materiałem): przechowuje `ior` powłoki, udostępnia
   `reflectance(cos θ)` (Schlick) i `reflect(…)`; statyczna funkcja `schlick(cos θ, ior)` wykorzystywana również przez
-  `Glass`.
+  `Glass`. `reflect` jest statyczne i służy także `Metal`.
 - `Plastic final : public Lambertian, private SpecularCoat` (**wielodziedziczenie implementacji**) — nadpisuje
   `scatter`: odbicie z powłoki albo wywołanie `Lambertian::scatter`.
 
@@ -528,6 +534,8 @@ Każdy wyjątek ma konstruktor przyjmujący opis i (gdzie ma to sens) dane konte
   albedo.
 - Wszystkie materiały: składowe tłumienia w `[0, 1]`; kierunek wyniku jednostkowy.
 - `schlick(cos θ, n) ∈ [0, 1]`, `schlick(1, 1) ≈ 0`, rośnie wraz z malejącym `cos θ`.
+- Rozkłady: kierunki lambertowskie spełniają prawo cosinusa (średnia `cos θ` równa 2/3); częstość odbić w `Glass`
+  i `Plastic` zgodna z `schlick` (z dokładnością do 6 błędów standardowych).
 
 **Camera**
 

@@ -10,7 +10,6 @@
 #include <concepts>
 #include <cstddef>
 #include <cstdint>
-#include <functional>
 #include <limits>
 #include <type_traits>
 #include <utility>
@@ -24,20 +23,6 @@ namespace {
 static_assert(!std::is_default_constructible_v<Sampler>, "a sampler always has an explicit seed");
 static_assert(!std::is_convertible_v<std::uint64_t, Sampler>, "a seed becomes a sampler only explicitly");
 static_assert(std::is_nothrow_copy_constructible_v<Sampler>);
-
-/// Draws per property case; enough for the statistical checks below to be sharp.
-constexpr int draws = 4096;
-
-/// Whether the mean of `draws` values produced by `draw` lies within six standard errors of `expected`, for values of
-/// the given `variance`. A correct sampler fails with probability about 2·10⁻⁹.
-[[nodiscard]] bool mean_is_close(const std::function<double()>& draw, double expected, double variance) {
-	double sum = 0.0;
-	for (int i = 0; i < draws; ++i) {
-		sum += draw();
-	}
-	const double standard_error = std::sqrt(variance / draws);
-	return std::abs((sum / draws) - expected) <= 6.0 * standard_error;
-}
 
 /// The first ten values of `sampler`.
 [[nodiscard]] std::array<double, 10> first_values(Sampler sampler) {

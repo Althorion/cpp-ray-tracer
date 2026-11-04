@@ -2,7 +2,13 @@
 #define RT_TESTS_GENERATORS_HPP
 
 #include "rt/colour.hpp"
+#include "rt/geometry/hit_record.hpp"
 #include "rt/geometry/sphere.hpp"
+#include "rt/materials/glass.hpp"
+#include "rt/materials/lambertian.hpp"
+#include "rt/materials/material.hpp"
+#include "rt/materials/metal.hpp"
+#include "rt/materials/plastic.hpp"
 #include "rt/maths/interval.hpp"
 #include "rt/maths/ray.hpp"
 #include "rt/maths/vector.hpp"
@@ -17,6 +23,8 @@
 #include <cstdint>
 #include <limits>
 #include <memory>
+#include <string>
+#include <tuple>
 #include <utility>
 
 namespace rt::test {
@@ -139,8 +147,9 @@ template <std::floating_point T>
 	return rc::gen::map(positive_scalar(), [](double value) { return std::max(value, 1e-3); });
 }
 
-/// Radius a sphere must reject: negative, zero, infinite or NaN.
-[[nodiscard]] inline rc::Gen<double> invalid_radius() {
+/// Number that is not finite and positive: negative, zero, infinite or NaN; e.g. an invalid radius or refractive
+/// index.
+[[nodiscard]] inline rc::Gen<double> not_finite_positive() {
 	return rc::gen::weightedOneOf<double>({
 			{1, rc::gen::map(positive_scalar(), [](double value) { return -value; })},
 			{1, rc::gen::just(0.0)},
@@ -148,10 +157,63 @@ template <std::floating_point T>
 	});
 }
 
-/// Sphere without a material, with a finite centre and a `sphere_radius`.
+/// Material name: any non-empty string.
+[[nodiscard]] inline rc::Gen<std::string> material_name() { return rc::gen::nonEmpty(rc::gen::string<std::string>()); }
+
+/// Metal fuzz, in [0, 1] with both ends generated often.
+[[nodiscard]] inline rc::Gen<double> fuzz() { return unit_channel(); }
+
+/// Fuzz outside [0, 1], or not finite.
+[[nodiscard]] inline rc::Gen<double> invalid_fuzz() {
+	return rc::gen::weightedOneOf<double>({
+			{1, rc::gen::map(positive_scalar(), [](double value) { return -value; })},
+			{1, rc::gen::map(positive_scalar(), [](double value) { return 1.0 + value; })},
+			{1, non_finite_scalar<double>()},
+	});
+}
+
+/// Refractive index: usually in [0.5, 3], which spans an air bubble in glass to diamond, and now and then exactly
+/// 1 (no boundary) or a common real value.
+[[nodiscard]] inline rc::Gen<double> refractive_index() {
+	return rc::gen::weightedOneOf<double>({
+			{4, rc::gen::map(unit_channel(), [](double value) { return 0.5 + (2.5 * value); })},
+			{1, rc::gen::element(1.0, 1.33, 1.5, 2.42)},
+	});
+}
+
+/// Colour with a component above 1, which no albedo may have.
+[[nodiscard]] inline rc::Gen<Colour> excessive_albedo() {
+	const auto excess = rc::gen::map(positive_scalar(), [](double value) { return 1.0 + value; });
+	return rc::gen::oneOf(rc::gen::construct<Colour>(excess, unit_channel(), unit_channel()),
+	                      rc::gen::construct<Colour>(unit_channel(), excess, unit_channel()),
+	                      rc::gen::construct<Colour>(unit_channel(), unit_channel(), excess));
+}
+
+/// Material for tests that need one but do not depend on which.
+[[nodiscard]] inline std::shared_ptr<const Material> placeholder_material() {
+	return std::make_shared<const Lambertian>("placeholder", Colour{0.5, 0.5, 0.5});
+}
+
+/// Sphere with a finite centre, a `sphere_radius` and the `placeholder_material`.
 [[nodiscard]] inline rc::Gen<Sphere> any_sphere() {
-	return rc::gen::construct<Sphere>(finite_vector<double, 3>(), sphere_radius(),
-	                                  rc::gen::just(std::shared_ptr<const Material>{}));
+	return rc::gen::construct<Sphere>(finite_vector<double, 3>(), sphere_radius(), rc::gen::just(placeholder_material()));
+}
+
+/// A ray meeting a surface: the record has a unit normal facing against the ray, and either `front_face`.
+struct Incidence {
+	Ray ray;
+	HitRecord record;
+};
+
+[[nodiscard]] inline rc::Gen<Incidence> incidence() {
+	return rc::gen::map(rc::gen::tuple(any_ray(), finite_scalar<double>(), nonzero_vector<double, 3>()),
+	                    [](const std::tuple<Ray, double, Vec3>& parts) {
+												const auto& [ray, t, outward_normal] = parts;
+												return Incidence{
+														.ray = ray,
+														.record = HitRecord::from_outward_normal(ray, t, outward_normal, nullptr),
+												};
+											});
 }
 
 /// Bound of a sampling range: usually a moderate number, now and then an extreme one (the largest or the smallest
@@ -184,6 +246,40 @@ template <std::floating_point T>
 } // namespace rt::test
 
 namespace rc {
+
+template <>
+struct Arbitrary<rt::Lambertian> {
+	static Gen<rt::Lambertian> arbitrary() {
+		return gen::construct<rt::Lambertian>(rt::test::material_name(), rt::test::unit_colour());
+	}
+};
+
+template <>
+struct Arbitrary<rt::Metal> {
+	static Gen<rt::Metal> arbitrary() {
+		return gen::construct<rt::Metal>(rt::test::material_name(), rt::test::unit_colour(), rt::test::fuzz());
+	}
+};
+
+template <>
+struct Arbitrary<rt::Glass> {
+	static Gen<rt::Glass> arbitrary() {
+		return gen::construct<rt::Glass>(rt::test::material_name(), rt::test::refractive_index());
+	}
+};
+
+template <>
+struct Arbitrary<rt::Plastic> {
+	static Gen<rt::Plastic> arbitrary() {
+		return gen::construct<rt::Plastic>(rt::test::material_name(), rt::test::unit_colour(),
+		                                   rt::test::refractive_index());
+	}
+};
+
+template <>
+struct Arbitrary<rt::test::Incidence> {
+	static Gen<rt::test::Incidence> arbitrary() { return rt::test::incidence(); }
+};
 
 template <>
 struct Arbitrary<rt::Sphere> {

@@ -10,6 +10,7 @@
 #include <concepts>
 #include <cstddef>
 #include <cstdlib>
+#include <functional>
 #include <string>
 #include <utility>
 
@@ -58,6 +59,21 @@ template <std::floating_point T, std::size_t N>
 		}
 	}
 	return true;
+}
+
+/// Draws per statistical check; enough for `mean_is_close` to be sharp.
+inline constexpr int draws = 4096;
+
+/// Whether the mean of `count` values produced by `draw` lies within six standard errors of `expected`, for values
+/// of the given `variance`. A correct implementation fails with probability about 2·10⁻⁹.
+[[nodiscard]] inline bool mean_is_close(const std::function<double()>& draw, double expected, double variance,
+                                        int count = draws) {
+	double sum = 0.0;
+	for (int i = 0; i < count; ++i) {
+		sum += draw();
+	}
+	const double standard_error = std::sqrt(variance / count);
+	return std::abs((sum / count) - expected) <= 6.0 * standard_error;
 }
 
 } // namespace rt::test

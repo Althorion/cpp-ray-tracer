@@ -20,6 +20,7 @@ rt_add_test(test_colour)
 rt_add_test(test_sampler)
 rt_add_test(test_hittable)
 rt_add_test(test_sphere)
+rt_add_test(test_materials)
 
 # Local Variables:
 # ispell-local-dictionary: "en-GB"
