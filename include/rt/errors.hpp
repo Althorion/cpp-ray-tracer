@@ -18,6 +18,12 @@ public:
 	explicit MathsError(const std::string& message);
 };
 
+/// An index or a size outside the permitted range, e.g. a pixel outside the image.
+class RangeError : public Error {
+public:
+	explicit RangeError(const std::string& message);
+};
+
 } // namespace rt
 
 #endif // RT_ERRORS_HPP

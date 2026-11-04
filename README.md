@@ -348,6 +348,11 @@ docs/
 - `class Sampler` — opakowuje `pcg32` (hermetyzacja: biblioteka nie wycieka do interfejsu poza nagłówkiem
   implementacji); `uniform()` ∈ `[0, 1)`, `template <std::floating_point T> T uniform(T lo, T hi)`,
   `unit_vector()`, `in_unit_disk()`; statyczna fabryka `for_pixel(seed, x, y, width)`.
+  `uniform` wykorzystuje pełną precyzję typu (dla `double` 53 bity z dwóch wyjść `pcg32`, dla `float` 24 bity
+  z jednego), a wynik `uniform(lo, hi)` zawsze leży w `[lo, hi)`, także dla skrajnych granic; granice nieskończone,
+  NaN lub `lo ≥ hi` → `MathsError`. `pcg32` uwzględnia tylko 63 bity numeru strumienia, więc numer większy niż
+  `2⁶³ − 1` oraz `x ≥ width` → `RangeError`. `in_unit_disk` losuje metodą odrzucania (wynik nigdy nie trafia na
+  brzeg koła mimo zaokrągleń), `unit_vector` — z twierdzenia Archimedesa (`z` jednostajne, azymut jednostajny).
 
 **Geometria**
 
@@ -494,6 +499,8 @@ Każdy wyjątek ma konstruktor przyjmujący opis i (gdzie ma to sens) dane konte
 - `‖unit_vector()‖ ≈ 1`; `‖in_unit_disk()‖ < 1` i składowa `z == 0`.
 - Ten sam `(seed, piksel)` → identyczna sekwencja; różne piksele → różne sekwencje (w praktyce: różne pierwsze
   10 wartości).
+- Rozkłady są równomierne: średnie (i średnie kwadratów) próbek zgodne z wartościami oczekiwanymi z dokładnością
+  do 6 błędów standardowych; pierwsze wartości dla `pcg32(42, 54)` zgodne z wzorcowym wyjściem pcg-cpp.
 
 **Sphere**
 

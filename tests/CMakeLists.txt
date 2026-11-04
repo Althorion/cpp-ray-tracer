@@ -17,6 +17,7 @@ rt_add_test(test_vector)
 rt_add_test(test_interval)
 rt_add_test(test_ray)
 rt_add_test(test_colour)
+rt_add_test(test_sampler)
 
 # Local Variables:
 # ispell-local-dictionary: "en-GB"

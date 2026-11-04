@@ -24,6 +24,8 @@ add_library(rt_core STATIC
 	src/errors.cpp
 )
 target_include_directories(rt_core PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
+# PUBLIC: the inline members of `Sampler` hold a `pcg32` (README.md § 7.2)
+target_link_libraries(rt_core PUBLIC pcg::pcg)
 rt_configure_target(rt_core)
 
 if(RT_BUILD_TESTS)

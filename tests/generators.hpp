@@ -5,6 +5,7 @@
 #include "rt/maths/interval.hpp"
 #include "rt/maths/ray.hpp"
 #include "rt/maths/vector.hpp"
+#include "rt/random/sampler.hpp"
 
 #include <rapidcheck.h>
 
@@ -12,6 +13,7 @@
 #include <cmath>
 #include <concepts>
 #include <cstddef>
+#include <cstdint>
 #include <limits>
 #include <utility>
 
@@ -129,9 +131,41 @@ template <std::floating_point T>
 	return rc::gen::construct<Colour>(channel, channel, channel);
 }
 
+/// Bound of a sampling range: usually a moderate number, now and then an extreme one (the largest or the smallest
+/// finite magnitude, or zero).
+template <std::floating_point T>
+[[nodiscard]] rc::Gen<T> range_bound() {
+	constexpr T largest = std::numeric_limits<T>::max();
+	constexpr T smallest = std::numeric_limits<T>::denorm_min();
+	return rc::gen::weightedOneOf<T>({
+			{8, finite_scalar<T>()},
+			{1, rc::gen::element(-largest, largest, -smallest, smallest, T{0})},
+	});
+}
+
+/// Sampler with an arbitrary seed and stream.
+[[nodiscard]] inline rc::Gen<Sampler> any_sampler() {
+	const auto stream = rc::gen::map(rc::gen::arbitrary<std::uint64_t>(),
+	                                 [](std::uint64_t value) { return value & Sampler::max_stream; });
+	return rc::gen::construct<Sampler>(rc::gen::arbitrary<std::uint64_t>(), stream);
+}
+
+/// Image width for pixel-stream tests: from a single column up to a very wide image.
+[[nodiscard]] inline rc::Gen<std::size_t> image_width() { return rc::gen::inRange<std::size_t>(1, 100'000); }
+
+/// Index in `[0, bound)`; `bound` must be positive.
+[[nodiscard]] inline rc::Gen<std::size_t> index_below(std::size_t bound) {
+	return rc::gen::inRange<std::size_t>(0, bound);
+}
+
 } // namespace rt::test
 
 namespace rc {
+
+template <>
+struct Arbitrary<rt::Sampler> {
+	static Gen<rt::Sampler> arbitrary() { return rt::test::any_sampler(); }
+};
 
 template <>
 struct Arbitrary<rt::Colour> {
