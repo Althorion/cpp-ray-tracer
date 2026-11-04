@@ -3,6 +3,7 @@
 
 #include <stdexcept>
 #include <string>
+#include <string_view>
 
 namespace rt {
 
@@ -22,6 +23,34 @@ public:
 class RangeError : public Error {
 public:
 	explicit RangeError(const std::string& message);
+};
+
+/// The scene is invalid, e.g. a camera looking along its own `up` vector.
+class SceneError : public Error {
+public:
+	explicit SceneError(const std::string& message);
+};
+
+/// A second object was registered under a name already taken.
+class DuplicateNameError : public SceneError {
+public:
+	explicit DuplicateNameError(std::string_view name);
+
+	[[nodiscard]] const std::string& name() const noexcept { return name_; }
+
+private:
+	std::string name_;
+};
+
+/// No object is registered under the name looked up.
+class UnknownNameError : public SceneError {
+public:
+	explicit UnknownNameError(std::string_view name);
+
+	[[nodiscard]] const std::string& name() const noexcept { return name_; }
+
+private:
+	std::string name_;
 };
 
 } // namespace rt

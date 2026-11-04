@@ -13,6 +13,7 @@
 #include "rt/maths/ray.hpp"
 #include "rt/maths/vector.hpp"
 #include "rt/random/sampler.hpp"
+#include "rt/scene/camera.hpp"
 
 #include <rapidcheck.h>
 
@@ -23,9 +24,12 @@
 #include <cstdint>
 #include <limits>
 #include <memory>
+#include <optional>
 #include <string>
+#include <string_view>
 #include <tuple>
 #include <utility>
+#include <vector>
 
 namespace rt::test {
 
@@ -157,8 +161,27 @@ template <std::floating_point T>
 	});
 }
 
-/// Material name: any non-empty string.
-[[nodiscard]] inline rc::Gen<std::string> material_name() { return rc::gen::nonEmpty(rc::gen::string<std::string>()); }
+/// Longest identifier the scene language allows (README.md § 5.1).
+inline constexpr std::size_t max_identifier_length = 20;
+
+/// Identifier of the scene language: an ASCII letter followed by up to 19 letters, digits, `_` or `-`.
+[[nodiscard]] inline rc::Gen<std::string> identifier() {
+	constexpr std::string_view letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+	const std::string others = std::string{letters} + "0123456789_-";
+	return rc::gen::mapcat(rc::gen::inRange<std::size_t>(0, max_identifier_length), [=](std::size_t tail_length) {
+		return rc::gen::map(rc::gen::pair(rc::gen::elementOf(std::string{letters}),
+		                                  rc::gen::container<std::string>(tail_length, rc::gen::elementOf(others))),
+		                    [](const std::pair<char, std::string>& parts) { return parts.first + parts.second; });
+	});
+}
+
+/// Several identifiers, repetitions included.
+[[nodiscard]] inline rc::Gen<std::vector<std::string>> identifiers() {
+	return rc::gen::container<std::vector<std::string>>(identifier());
+}
+
+/// Material name: an identifier, as the parser would accept it.
+[[nodiscard]] inline rc::Gen<std::string> material_name() { return identifier(); }
 
 /// Metal fuzz, in [0, 1] with both ends generated often.
 [[nodiscard]] inline rc::Gen<double> fuzz() { return unit_channel(); }
@@ -238,6 +261,62 @@ template <std::floating_point T>
 /// Image width for pixel-stream tests: from a single column up to a very wide image.
 [[nodiscard]] inline rc::Gen<std::size_t> image_width() { return rc::gen::inRange<std::size_t>(1, 100'000); }
 
+/// Valid camera settings with moderate parameters: positions within `coordinate_bound`, a target at a distance in
+/// [0.01, 100], an `up` at least about 6° away from the viewing direction, `fov` in [1, 179], `aperture` in [0, 2]
+/// and, unless left to its default, `focus` in [0.1, 100].
+[[nodiscard]] inline rc::Gen<CameraSettings> camera_settings() {
+	const auto scaled = [](double lo, double hi) {
+		return rc::gen::map(unit_channel(), [=](double value) { return lo + ((hi - lo) * value); });
+	};
+	const auto focus = rc::gen::weightedOneOf<std::optional<double>>({
+			{1, rc::gen::just(std::optional<double>{})},
+			{2, rc::gen::map(scaled(0.1, 100.0), [](double value) { return std::optional{value}; })},
+	});
+	const auto settings = rc::gen::apply(
+			[](const Point3& from, const Vec3& heading, double distance, const Vec3& up, double fov, double aperture,
+			   std::optional<double> focus_distance) {
+				return CameraSettings{
+						.from = from,
+						.to = from + (heading * distance),
+						.up = up,
+						.fov = fov,
+						.aperture = aperture,
+						.focus = focus_distance,
+				};
+			},
+			finite_vector<double, 3>(), unit_vector<double, 3>(), scaled(0.01, 100.0), unit_vector<double, 3>(),
+			scaled(1.0, 179.0), scaled(0.0, 2.0), focus);
+	return rc::gen::suchThat(settings, [](const CameraSettings& candidate) {
+		return candidate.from != candidate.to &&
+		       cross(candidate.up, (candidate.to - candidate.from).normalised()).length() >= 0.1;
+	});
+}
+
+/// Finite number other than zero, of either sign.
+[[nodiscard]] inline rc::Gen<double> nonzero_scalar() {
+	return rc::gen::suchThat(finite_scalar<double>(), [](double value) { return value != 0.0; });
+}
+
+/// Field of view outside (0, 180) degrees, or not finite.
+[[nodiscard]] inline rc::Gen<double> invalid_fov() {
+	return rc::gen::weightedOneOf<double>({
+			{2, rc::gen::map(finite_scalar<double>(), [](double value) { return -std::abs(value); })},
+			{2, rc::gen::map(finite_scalar<double>(), [](double value) { return 180.0 + std::abs(value); })},
+			{1, non_finite_scalar<double>()},
+	});
+}
+
+/// Number that is not finite and non-negative: negative, infinite or NaN; e.g. an invalid aperture.
+[[nodiscard]] inline rc::Gen<double> not_finite_non_negative() {
+	return rc::gen::suchThat(not_finite_positive(), [](double value) { return value != 0.0; });
+}
+
+/// Image size for camera tests, from a single pixel up to 64×64.
+[[nodiscard]] inline rc::Gen<Resolution> resolution() {
+	const auto side = rc::gen::inRange<std::size_t>(1, 65);
+	return rc::gen::construct<Resolution>(side, side);
+}
+
 /// Index in `[0, bound)`; `bound` must be positive.
 [[nodiscard]] inline rc::Gen<std::size_t> index_below(std::size_t bound) {
 	return rc::gen::inRange<std::size_t>(0, bound);
@@ -284,6 +363,16 @@ struct Arbitrary<rt::test::Incidence> {
 template <>
 struct Arbitrary<rt::Sphere> {
 	static Gen<rt::Sphere> arbitrary() { return rt::test::any_sphere(); }
+};
+
+template <>
+struct Arbitrary<rt::CameraSettings> {
+	static Gen<rt::CameraSettings> arbitrary() { return rt::test::camera_settings(); }
+};
+
+template <>
+struct Arbitrary<rt::Resolution> {
+	static Gen<rt::Resolution> arbitrary() { return rt::test::resolution(); }
 };
 
 template <>

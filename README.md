@@ -404,12 +404,24 @@ docs/
 
 - `template <typename T> class Registry` — odwzorowanie nazwa → `std::shared_ptr<T>`; `add` (rzuca
   `DuplicateNameError`), `get` (rzuca `UnknownNameError`), `contains`, `size`; ograniczenie przez koncept
-  (`T` musi spełniać `std::derived_from<T, INamed>`).
+  (`T` musi spełniać `std::derived_from<T, INamed>`). Kluczem jest `name()` obiektu; `add` pustego wskaźnika rzuca
+  `Error`, a nieudane `add` nie zmienia rejestru. Wyjątki o nazwach udostępniają ją przez `name()`.
+- `struct CameraSettings` — `from`, `to`, `up` (domyślnie `0 1 0`), `fov` (90), `aperture` (0),
+  `std::optional<double> focus` (brak = `‖to − from‖`); porównywalna (`==`), bez walidacji.
+- `struct Resolution` — `width`, `height`. Rozdzielczość pochodzi z wiersza poleceń, nie z pliku sceny, więc kamera
+  (tworzona przez parser) dostaje ją dopiero przy generowaniu promieni.
 - `class Camera` — konstruowana z `CameraSettings` (walidacja parametrów, rzuca `SceneError`); `ray_for(x, y,
-  Sampler&) const`.
+  Resolution, Sampler&) const`, piksele liczone od lewego górnego rogu, `(x, y)` poza obrazem → `RangeError`.
+  Oprócz warunków z [§ 5.2](#52-dyrektywy) odrzuca `up` prawie równoległy do kierunku patrzenia (sinus kąta
+  `< 10⁻⁹`, gdy orientację obrazu wyznaczałyby błędy zaokrągleń) i ustawienia, których geometria wykracza poza zakres
+  `double` (zamiast `MathsError` — `SceneError`). Kamera otworkowa (`aperture = 0`) pobiera z `Sampler` tylko dwa
+  przesunięcia w obrębie piksela; inna — dodatkowo punkt na przysłonie.
+- `struct Sky` — `top`, `bottom` (domyślnie `0.5 0.7 1.0` i `1 1 1`), `colour(direction)` wg
+  [§ 6.2](#62-śledzenie-ścieżki); zerowy kierunek → `MathsError`.
 - `class Scene` — **kompozycja**: posiada `Camera`, `Sky` oraz `std::vector<std::unique_ptr<IHittable>>`;
-  materiały w `Registry<Material>`. Metoda `hit(...)` zwraca najbliższe trafienie; `sky_colour(direction)`.
-  Nie da się jej skopiować (`= delete("...")`), można przenieść.
+  materiały w `Registry<Material>`. Metoda `hit(ray, range)` zwraca najbliższe trafienie; `sky_colour(direction)`.
+  Uzupełniana przez `add_material` (rzuca `DuplicateNameError`) i `add_object` (pusty wskaźnik → `Error`);
+  `materials()`, `object_count()`. Nie da się jej skopiować (`= delete("...")`), można przenieść (`noexcept`).
 
 **Parsowanie**
 
@@ -554,6 +566,16 @@ Każdy wyjątek ma konstruktor przyjmujący opis i (gdzie ma to sens) dane konte
 - Wszystkie promienie przechodzące przez punkt płaszczyzny ogniskowania danego piksela (bez jittera) zbiegają się
   w nim niezależnie od punktu na przysłonie.
 - Niepoprawne ustawienia (`fov ∉ (0, 180)`, `from == to`, `up ∥ kierunek`) rzucają `SceneError`.
+- Promień piksela `(x, y)` przecina płaszczyznę ogniskowania w obrębie tego piksela (lewy górny piksel — w lewym
+  górnym rogu), niezależnie od punktu na przysłonie; bazę kamery test wyznacza niezależnie od `Camera`.
+- Domyślne `focus` równe `‖to − from‖`; piksel poza obrazem → `RangeError`; ten sam stan `Sampler` → ten sam promień.
+
+**Scene**
+
+- `hit` zwraca to samo trafienie co najbliższe z trafień pojedynczych kul; pusta scena nie jest trafiana.
+- Niebo: `top` dokładnie w górę, `bottom` dokładnie w dół, pośrednie składowe między nimi; kolor zależy tylko od
+  kierunku, nie od długości wektora.
+- Przeniesiona scena zachowuje obiekty i materiały.
 
 **Registry**
 

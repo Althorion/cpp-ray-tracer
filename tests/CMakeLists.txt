@@ -21,6 +21,9 @@ rt_add_test(test_sampler)
 rt_add_test(test_hittable)
 rt_add_test(test_sphere)
 rt_add_test(test_materials)
+rt_add_test(test_registry)
+rt_add_test(test_camera)
+rt_add_test(test_scene)
 
 # Local Variables:
 # ispell-local-dictionary: "en-GB"
