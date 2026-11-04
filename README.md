@@ -142,12 +142,21 @@ raytracer <scene-file> <WIDTHxHEIGHT> <output.ppm> [options]
 
 ### 5.1. Leksyka
 
-- Plik tekstowy UTF-8, przetwarzany wierszami. Jeden wiersz = jedna dyrektywa.
-- Komentarz od `#` do końca wiersza. Puste wiersze są ignorowane.
+- Plik tekstowy ASCII, przetwarzany wierszami. Jeden wiersz = jedna dyrektywa. Dozwolone są wyłącznie znaki
+  drukowalne (`0x20`–`0x7E`), tabulator i znak nowego wiersza (LF; para CR LF jest traktowana jak LF); jedynym
+  wyjątkiem są komentarze (niżej). Każdy inny bajt jest błędem (`SceneParseError` wskazujący ten bajt). Poza
+  komentarzami kolumna to więc po prostu numer bajtu w wierszu (od 1).
+- Komentarz od `#` do końca wiersza. Poza znakami dozwolonymi w całym pliku może zawierać dowolne bajty `≥ 0x80`
+  (np. znaki UTF-8 spoza ASCII), które **nie są walidowane** — parser je pomija, nie sprawdzając poprawności
+  kodowania. Znaki sterujące (poza tabulatorem) są błędem także w komentarzu. Bajty UTF-8 spoza ASCII nigdy nie są
+  równe `#` ani LF, więc komentarz można odciąć wyszukiwaniem bajtu `#` bez dekodowania.
+- Puste wiersze są ignorowane.
 - Tokeny rozdzielone dowolnymi białymi znakami (spacja, tabulator).
 - **Liczba**: zapis dziesiętny akceptowany przez `std::from_chars` dla `double` (np. `-1`, `0.5`, `1e-3`);
   wartości nieskończone i NaN są błędem.
-- **Identyfikator**: `[A-Za-z_][A-Za-z0-9_-]*`.
+- **Identyfikator**: `[A-Za-z][A-Za-z0-9_-]*`, od 1 do 20 znaków — zaczyna się literą ASCII, dalej litery, cyfry,
+  `_` i `-`. Identyfikator nigdy nie jest więc poprawną liczbą (`inf` i `nan` są identyfikatorami, a jako liczby
+  i tak są błędem).
 - Słowa kluczowe rozróżniają wielkość liter (wyłącznie małe).
 
 ### 5.2. Dyrektywy
@@ -380,7 +389,7 @@ docs/
 - Interfejs `INamed` — `virtual std::string_view name() const = 0;`
 - Klasa abstrakcyjna `Material : public IScatterer, public INamed` (**wielodziedziczenie interfejsów**) —
   przechowuje nazwę (prywatnie), implementuje `name()`, `scatter` pozostaje czysto wirtualne. Pusta nazwa → `Error`
-  (wyłącznie zabezpieczenie: parser nie powinien jej przepuścić, bo identyfikator ma co najmniej jeden znak).
+  (wyłącznie zabezpieczenie: parser nie powinien jej przepuścić, bo identyfikator musi zaczynać się literą).
   Parametry materiałów są sprawdzane w konstruktorach i rzucają `MathsError`: albedo o składowej `> 1`, `fuzz`
   spoza `[0, 1]`, `ior` nieskończony, NaN lub `≤ 0`.
 - `Lambertian : public Material`, `Metal final : public Material`, `Glass final : public Material` — nadpisują
@@ -559,6 +568,11 @@ Każdy wyjątek ma konstruktor przyjmujący opis i (gdzie ma to sens) dane konte
   `SceneParseError`.
 - Wstawienie błędnego wiersza na pozycji `k` do poprawnej sceny daje `SceneParseError` z numerem wiersza `k`.
 - Użycie niezdefiniowanego materiału, duplikat nazwy, brak kamery, wartości spoza zakresu → `SceneParseError`.
+- Bajt spoza dozwolonych (`≥ 0x80` poza komentarzem lub znak sterujący inny niż tabulator w dowolnym miejscu
+  wiersza) → `SceneParseError` z kolumną tego bajtu.
+- Dowolne bajty `≥ 0x80` w komentarzu (także niepoprawne UTF-8) nie zmieniają wyniku.
+- Identyfikator: każdy napis z `[A-Za-z][A-Za-z0-9_-]{0,19}` jest akceptowany; napis dłuższy niż 20 znaków,
+  zaczynający się czymś innym niż litera (np. `1`, `_`, `-`) lub z innym znakiem (np. `.`, `$`) → `SceneParseError`.
 - Tokeniser: konkatenacja tokenów z odstępami odtwarza wiersz bez komentarza, z dokładnością do białych znaków;
   kolumny tokenów są rosnące.
 
