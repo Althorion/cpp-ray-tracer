@@ -232,8 +232,18 @@ i kolumny (od 1) oraz opisem, np.:
 scenes/demo.txt:7:12: error: expected number, got 'abc'
 ```
 
-Błędy semantyczne (np. nieznany materiał, brak kamery) także rzucają `SceneParseError` ze wskazaniem wiersza
-(dla braku kamery: wiersz 0, kolumna 0 i odpowiedni komunikat).
+Błędy semantyczne także rzucają `SceneParseError` ze wskazaniem wiersza (dla braku kamery: wiersz 0, kolumna 0
+i odpowiedni komunikat). Parser wykrywa je sam, w trakcie czytania, zanim powstanie jakikolwiek obiekt sceny:
+
+- wartość spoza zakresu z [§ 5.2](#52-dyrektywy) — wg wspólnych reguł `rt::validation` (§ 7.2), z kolumną
+  niepoprawnego tokenu; warunki łączące kilka parametrów `camera` (`from ≠ to`, `up` nierównoległy do kierunku
+  patrzenia) — z kolumną słowa `camera`;
+- materiał użyty przed zdefiniowaniem lub niezdefiniowany, duplikat nazwy materiału — parser pamięta zbiór nazw
+  zdefiniowanych do bieżącego wiersza;
+- brak `camera`, powtórzone `camera` lub `sky`.
+
+Opis sceny przyjęty przez parser zawsze daje się zbudować; walidacja w `build_scene` i konstruktorach jest tylko
+zabezpieczeniem (np. dla opisów tworzonych w kodzie).
 
 ### 5.5. Przykład
 
@@ -325,7 +335,7 @@ include/rt/
   io/                  image_writer.hpp ppm_writer.hpp
   logging/             log_level.hpp log_sink.hpp logger.hpp
   cli/                 command_line.hpp options.hpp
-  errors.hpp
+  errors.hpp  validation.hpp
 src/                   # odpowiadające pliki .cpp + main.cpp
 tests/                 # harness.hpp, generators.hpp, test_*.cpp
 scenes/                # przykładowe sceny
@@ -390,8 +400,8 @@ docs/
 - Klasa abstrakcyjna `Material : public IScatterer, public INamed` (**wielodziedziczenie interfejsów**) —
   przechowuje nazwę (prywatnie), implementuje `name()`, `scatter` pozostaje czysto wirtualne. Pusta nazwa → `Error`
   (wyłącznie zabezpieczenie: parser nie powinien jej przepuścić, bo identyfikator musi zaczynać się literą).
-  Parametry materiałów są sprawdzane w konstruktorach i rzucają `MathsError`: albedo o składowej `> 1`, `fuzz`
-  spoza `[0, 1]`, `ior` nieskończony, NaN lub `≤ 0`.
+  Parametry materiałów są sprawdzane w konstruktorach regułami `rt::validation` i rzucają `MathsError`: albedo
+  o składowej `> 1`, `fuzz` spoza `[0, 1]`, `ior` nieskończony, NaN lub `≤ 0`.
 - `Lambertian : public Material`, `Metal final : public Material`, `Glass final : public Material` — nadpisują
   `scatter` (`override`).
 - `class SpecularCoat` — klasa domieszkowa (nie jest materiałem): przechowuje `ior` powłoki, udostępnia
@@ -412,9 +422,11 @@ docs/
   (tworzona przez parser) dostaje ją dopiero przy generowaniu promieni.
 - `class Camera` — konstruowana z `CameraSettings` (walidacja parametrów, rzuca `SceneError`); `ray_for(x, y,
   Resolution, Sampler&) const`, piksele liczone od lewego górnego rogu, `(x, y)` poza obrazem → `RangeError`.
-  Oprócz warunków z [§ 5.2](#52-dyrektywy) odrzuca `up` prawie równoległy do kierunku patrzenia (sinus kąta
-  `< 10⁻⁹`, gdy orientację obrazu wyznaczałyby błędy zaokrągleń) i ustawienia, których geometria wykracza poza zakres
-  `double` (zamiast `MathsError` — `SceneError`). Kamera otworkowa (`aperture = 0`) pobiera z `Sampler` tylko dwa
+  Sprawdza warunki z [§ 5.2](#52-dyrektywy) regułami `rt::validation` — w tym `up` prawie równoległy do kierunku
+  patrzenia (sinus kąta `< validation::min_up_sine = 10⁻⁹`, gdy orientację obrazu wyznaczałyby błędy zaokrągleń) —
+  a ponadto odrzuca ustawienia, których geometria wykracza poza zakres `double` (zamiast `MathsError` —
+  `SceneError`); tego ostatniego parser nie sprawdza, więc `SceneError` z konstruktora `Camera` opatruje wierszem
+  dyrektywy `camera`. Kamera otworkowa (`aperture = 0`) pobiera z `Sampler` tylko dwa
   przesunięcia w obrębie piksela; inna — dodatkowo punkt na przysłonie.
 - `struct Sky` — `top`, `bottom` (domyślnie `0.5 0.7 1.0` i `1 1 1`), `colour(direction)` wg
   [§ 6.2](#62-śledzenie-ścieżki); zerowy kierunek → `MathsError`.
@@ -430,17 +442,35 @@ docs/
 - `Scene build_scene(const SceneDescription&)` — tworzy scenę, walidując opis po drodze: niepoprawny parametr
   kamery, materiału lub kuli, pusta nazwa materiału i składowa koloru nieba `> 1` → `SceneError` z nazwą materiału
   lub numerem kuli (od 1) w komunikacie; duplikat nazwy → `DuplicateNameError`, nieznany materiał →
-  `UnknownNameError`. `demo_scene_description()` zwraca scenę z [§ 5.5](#55-przykład).
+  `UnknownNameError`. Te same reguły co parser (`rt::validation`); dla opisu z parsera to tylko zabezpieczenie.
+  `demo_scene_description()` zwraca scenę z [§ 5.5](#55-przykład).
+
+**Walidacja** (`validation.hpp`)
+
+- Przestrzeń nazw `rt::validation` — jedyne miejsce, w którym zapisano ograniczenia z [§ 5.2](#52-dyrektywy);
+  korzystają z niej konstruktory (`Lambertian`, `Metal`, `Glass`, `Plastic`/`SpecularCoat`, `Sphere`, `Camera`),
+  `build_scene` i parser.
+- Funkcje `check_rgb`, `check_fuzz`, `check_ior`, `check_radius`, `check_fov`, `check_aperture`, `check_focus`
+  (`constexpr`, `noexcept`) oraz `check_camera_axes(from, to, up)` zwracają `Problem` =
+  `std::optional<std::string_view>`: brak wartości dla poprawnego argumentu, w przeciwnym razie opis problemu gotowy
+  do komunikatu. Nie rzucają, więc każdy użytkownik zgłasza problem własnym wyjątkiem: konstruktory materiałów i kul
+  — `MathsError`, `Camera` i `build_scene` — `SceneError`, parser — `SceneParseError` z pozycją tokenu.
+- `template <std::derived_from<Error> E> T validated(T value, Check check)` — zwraca `value` albo rzuca `E` z opisem
+  problemu; używane w listach inicjalizacyjnych konstruktorów.
+- `check_camera_axes` nie przepełnia się nawet dla współrzędnych bliskich `±DBL_MAX` (różnica liczona z połówek).
 
 **Parsowanie**
 
 - `class Tokeniser` — dzieli wiersz na tokeny z pozycjami (wiersz, kolumna).
 - `class SceneParser` — tabela dyrektyw `std::unordered_map<std::string_view, std::function<void(Arguments&)>>`
-  wypełniona **wyrażeniami lambda** w konstruktorze; `Scene parse(std::istream&, std::string_view file_name)` oraz
+  wypełniona **wyrażeniami lambda** w konstruktorze. Właściwą pracę wykonuje
+  `SceneDescription parse_description(std::istream&, std::string_view file_name)`: sprawdza składnię i wszystkie
+  reguły semantyczne z [§ 5.4](#54-błędy), rzucając wyłącznie `SceneParseError`. Na nim opierają się
+  `Scene parse(std::istream&, std::string_view file_name)` = `build_scene(parse_description(…))` oraz
   `Scene parse_file(const std::filesystem::path&)` (rzuca `IoError`, gdy pliku nie da się otworzyć).
-- `std::string serialise(const SceneDescription&)` — zapis sceny z powrotem do języka opisu (używany w testach
-  „tam i z powrotem”). `SceneDescription` to prosta, porównywalna (`operator==`) struktura danych opisu, z której
-  powstaje `Scene`.
+- `std::string serialise(const SceneDescription&)` — zapis opisu z powrotem do języka opisu (używany w testach
+  „tam i z powrotem”); liczby w najkrótszej postaci odtwarzającej dokładnie tę samą wartość (`std::format("{}")`),
+  wszystkie parametry jawnie, także domyślne (poza nieobecnym `focus`).
 
 **Renderowanie**
 
@@ -586,6 +616,13 @@ Każdy wyjątek ma konstruktor przyjmujący opis i (gdzie ma to sens) dane konte
   kierunku, nie od długości wektora.
 - Przeniesiona scena zachowuje obiekty i materiały.
 
+**Walidacja**
+
+- Konstruktory odrzucają dokładnie te wartości, które odrzucają odpowiednie funkcje `check_*` (dla `Camera`:
+  alternatywa `check_camera_axes`, `check_fov`, `check_aperture` i `check_focus`).
+- Przypadki graniczne każdej reguły (np. `fov` równe 0 i 180, `fuzz` równe 0 i 1, najmniejsza dodatnia liczba
+  zmiennoprzecinkowa); `check_camera_axes` dla współrzędnych `±DBL_MAX` i różnic podnormalnych.
+
 **SceneDescription i build_scene**
 
 - Dla dowolnego poprawnego opisu zbudowana scena ma opisane kamerę, niebo, materiały (rodzaj i parametry)
@@ -601,7 +638,8 @@ Każdy wyjątek ma konstruktor przyjmujący opis i (gdzie ma to sens) dane konte
 
 **Parser i Tokeniser**
 
-- „Tam i z powrotem”: dla dowolnego poprawnego `SceneDescription d`: `parse(serialise(d)) == d`.
+- „Tam i z powrotem”: dla dowolnego poprawnego `SceneDescription d`: `parse_description(serialise(d)) == d`.
+- Każdy opis przyjęty przez `parse_description` daje się zbudować: `build_scene` nie rzuca wyjątku.
 - Dodanie komentarzy, pustych wierszy i dodatkowych białych znaków nie zmienia wyniku.
 - Dowolne losowe wejście (losowe bajty / losowe tokeny) nigdy nie powoduje awarii — wyłącznie poprawny wynik albo
   `SceneParseError`.

@@ -319,6 +319,12 @@ template <std::floating_point T>
 	return rc::gen::construct<Resolution>(side, side);
 }
 
+/// Either a value from `valid` or one from `invalid`, for checking that two validations agree.
+template <typename T>
+[[nodiscard]] rc::Gen<T> valid_or_not(rc::Gen<T> valid, rc::Gen<T> invalid) {
+	return rc::gen::oneOf(std::move(valid), std::move(invalid));
+}
+
 /// Index in `[0, bound)`; `bound` must be positive.
 [[nodiscard]] inline rc::Gen<std::size_t> index_below(std::size_t bound) {
 	return rc::gen::inRange<std::size_t>(0, bound);

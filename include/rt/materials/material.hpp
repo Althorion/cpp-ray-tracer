@@ -53,16 +53,6 @@ protected:
 	/// @throws Error if `name` is empty.
 	explicit Material(std::string name) : name_{validated_name(std::move(name))} {}
 
-	/// A reflectance, i.e. a colour with no component above 1 (README.md § 5.2), so that no surface creates light.
-	///
-	/// @throws MathsError if a component of `albedo` exceeds 1.
-	[[nodiscard]] static Colour validated_albedo(const Colour& albedo) {
-		if (albedo.r() > 1.0 || albedo.g() > 1.0 || albedo.b() > 1.0) {
-			throw MathsError{"albedo components must not exceed 1"};
-		}
-		return albedo;
-	}
-
 private:
 	std::string name_;
 

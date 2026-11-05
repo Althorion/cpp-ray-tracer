@@ -3,6 +3,7 @@
 
 #include "rt/errors.hpp"
 #include "rt/maths/vector.hpp"
+#include "rt/validation.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -16,7 +17,7 @@ namespace rt {
 class SpecularCoat {
 public:
 	/// @throws MathsError unless `ior` is finite and positive.
-	explicit SpecularCoat(double ior) : ior_{validated_ior(ior)} {}
+	explicit SpecularCoat(double ior) : ior_{validation::validated<MathsError>(ior, validation::check_ior)} {}
 
 	[[nodiscard]] double ior() const noexcept { return ior_; }
 
@@ -45,14 +46,6 @@ public:
 	/// angle of incidence, and the length is that of `direction`.
 	[[nodiscard]] static Vec3 reflect(const Vec3& direction, const Vec3& normal) {
 		return direction - (normal * (2.0 * dot(direction, normal)));
-	}
-
-	/// @throws MathsError unless `ior` is finite and positive.
-	[[nodiscard]] static double validated_ior(double ior) {
-		if (!std::isfinite(ior) || ior <= 0.0) {
-			throw MathsError{"a refractive index must be finite and positive"};
-		}
-		return ior;
 	}
 
 private:

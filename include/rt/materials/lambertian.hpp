@@ -7,6 +7,7 @@
 #include "rt/maths/ray.hpp"
 #include "rt/maths/vector.hpp"
 #include "rt/random/sampler.hpp"
+#include "rt/validation.hpp"
 
 #include <optional>
 #include <string>
@@ -22,7 +23,8 @@ class Lambertian : public Material {
 public:
 	/// @throws Error if `name` is empty.
 	/// @throws MathsError if a component of `albedo` exceeds 1.
-	Lambertian(std::string name, const Colour& albedo) : Material{std::move(name)}, albedo_{validated_albedo(albedo)} {}
+	Lambertian(std::string name, const Colour& albedo)
+			: Material{std::move(name)}, albedo_{validation::validated<MathsError>(albedo, validation::check_rgb)} {}
 
 	[[nodiscard]] const Colour& albedo() const noexcept { return albedo_; }
 

@@ -25,6 +25,7 @@ rt_add_test(test_registry)
 rt_add_test(test_camera)
 rt_add_test(test_scene)
 rt_add_test(test_scene_description)
+rt_add_test(test_validation)
 
 # Local Variables:
 # ispell-local-dictionary: "en-GB"

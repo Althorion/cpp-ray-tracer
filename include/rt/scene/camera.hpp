@@ -5,12 +5,14 @@
 #include "rt/maths/ray.hpp"
 #include "rt/maths/vector.hpp"
 #include "rt/random/sampler.hpp"
+#include "rt/validation.hpp"
 
 #include <cmath>
 #include <cstddef>
 #include <format>
 #include <numbers>
 #include <optional>
+#include <string>
 
 namespace rt {
 
@@ -51,11 +53,7 @@ public:
 		try {
 			const Vec3 backwards = settings.from - settings.to;
 			w_ = backwards.normalised();
-			const Vec3 right = cross(settings.up.normalised(), w_);
-			if (right.length() < min_sine) {
-				throw SceneError{"the camera's up vector must not be parallel to its viewing direction"};
-			}
-			u_ = right.normalised();
+			u_ = cross(settings.up.normalised(), w_).normalised();
 			v_ = cross(w_, u_);
 			focus_ = settings.focus.value_or(backwards.length());
 			focal_centre_ = settings.from - (w_ * focus_);
@@ -106,10 +104,6 @@ public:
 	}
 
 private:
-	/// Below this sine of the angle between `up` and the viewing direction, rounding errors would dominate the
-	/// direction of `u`, and with it the orientation of the image.
-	static constexpr double min_sine = 1e-9;
-
 	CameraSettings settings_;
 	Vec3 u_;
 	Vec3 v_;
@@ -119,21 +113,18 @@ private:
 	/// Half the height of the image plane, at the focus distance.
 	double half_height_ = 0.0;
 
+	/// Every limit of README.md § 5.2, checked by the shared `validation` rules.
 	static void validate(const CameraSettings& settings) {
-		if (settings.from == settings.to) {
-			throw SceneError{"the camera must not look at its own position"};
-		}
-		if (settings.up == Vec3::zero()) {
-			throw SceneError{"the camera's up vector must not be zero"};
-		}
-		if (std::isnan(settings.fov) || settings.fov <= 0.0 || settings.fov >= 180.0) {
-			throw SceneError{std::format("the camera's field of view must lie in (0, 180) degrees, got {}", settings.fov)};
-		}
-		if (!std::isfinite(settings.aperture) || settings.aperture < 0.0) {
-			throw SceneError{std::format("the camera's aperture must be finite and non-negative, got {}", settings.aperture)};
-		}
-		if (settings.focus && (!std::isfinite(*settings.focus) || *settings.focus <= 0.0)) {
-			throw SceneError{std::format("the camera's focus distance must be finite and positive, got {}", *settings.focus)};
+		const auto require = [](validation::Problem problem) {
+			if (problem) {
+				throw SceneError{std::string{*problem}};
+			}
+		};
+		require(validation::check_camera_axes(settings.from, settings.to, settings.up));
+		require(validation::check_fov(settings.fov));
+		require(validation::check_aperture(settings.aperture));
+		if (settings.focus) {
+			require(validation::check_focus(*settings.focus));
 		}
 	}
 };

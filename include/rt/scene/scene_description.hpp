@@ -12,6 +12,7 @@
 #include "rt/maths/vector.hpp"
 #include "rt/scene/camera.hpp"
 #include "rt/scene/scene.hpp"
+#include "rt/validation.hpp"
 
 #include <concepts>
 #include <cstddef>
@@ -105,13 +106,6 @@ namespace detail {
 			description.parameters);
 }
 
-/// @throws SceneError if a component of `colour` exceeds 1, as no `<rgb>` may (README.md § 5.2).
-inline void require_rgb(const Colour& colour, const char* what) {
-	if (colour.r() > 1.0 || colour.g() > 1.0 || colour.b() > 1.0) {
-		throw SceneError{std::format("the {} colour must have components in [0, 1]", what)};
-	}
-}
-
 } // namespace detail
 
 /// Builds the scene described by `description`.
@@ -124,8 +118,11 @@ inline void require_rgb(const Colour& colour, const char* what) {
 /// @throws DuplicateNameError if two materials share a name.
 /// @throws UnknownNameError if a sphere refers to a material not described.
 [[nodiscard]] inline Scene build_scene(const SceneDescription& description) {
-	detail::require_rgb(description.sky.top, "sky's top");
-	detail::require_rgb(description.sky.bottom, "sky's bottom");
+	for (const Colour& colour : {description.sky.top, description.sky.bottom}) {
+		if (const auto problem = validation::check_rgb(colour)) {
+			throw SceneError{std::format("sky: {}", *problem)};
+		}
+	}
 	Scene scene{Camera{description.camera}, description.sky};
 
 	for (const auto& material : description.materials) {

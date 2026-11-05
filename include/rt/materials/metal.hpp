@@ -9,6 +9,7 @@
 #include "rt/maths/ray.hpp"
 #include "rt/maths/vector.hpp"
 #include "rt/random/sampler.hpp"
+#include "rt/validation.hpp"
 
 #include <cmath>
 #include <optional>
@@ -23,7 +24,9 @@ public:
 	/// @throws Error if `name` is empty.
 	/// @throws MathsError if a component of `albedo` exceeds 1, or `fuzz` is not in [0, 1].
 	Metal(std::string name, const Colour& albedo, double fuzz)
-			: Material{std::move(name)}, albedo_{validated_albedo(albedo)}, fuzz_{validated_fuzz(fuzz)} {}
+			: Material{std::move(name)},
+				albedo_{validation::validated<MathsError>(albedo, validation::check_rgb)},
+				fuzz_{validation::validated<MathsError>(fuzz, validation::check_fuzz)} {}
 
 	[[nodiscard]] const Colour& albedo() const noexcept { return albedo_; }
 	[[nodiscard]] double fuzz() const noexcept { return fuzz_; }
@@ -44,13 +47,6 @@ public:
 private:
 	Colour albedo_;
 	double fuzz_;
-
-	[[nodiscard]] static double validated_fuzz(double fuzz) {
-		if (std::isnan(fuzz) || fuzz < 0.0 || fuzz > 1.0) {
-			throw MathsError{"the fuzz of a metal must lie in [0, 1]"};
-		}
-		return fuzz;
-	}
 };
 
 } // namespace rt

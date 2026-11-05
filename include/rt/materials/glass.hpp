@@ -8,6 +8,7 @@
 #include "rt/maths/ray.hpp"
 #include "rt/maths/vector.hpp"
 #include "rt/random/sampler.hpp"
+#include "rt/validation.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -22,7 +23,8 @@ class Glass final : public Material {
 public:
 	/// @throws Error if `name` is empty.
 	/// @throws MathsError unless `ior` is finite and positive.
-	Glass(std::string name, double ior) : Material{std::move(name)}, ior_{SpecularCoat::validated_ior(ior)} {}
+	Glass(std::string name, double ior)
+			: Material{std::move(name)}, ior_{validation::validated<MathsError>(ior, validation::check_ior)} {}
 
 	[[nodiscard]] double ior() const noexcept { return ior_; }
 
