@@ -14,6 +14,8 @@
 #include "rt/maths/vector.hpp"
 #include "rt/random/sampler.hpp"
 #include "rt/scene/camera.hpp"
+#include "rt/scene/scene.hpp"
+#include "rt/scene/scene_description.hpp"
 
 #include <rapidcheck.h>
 
@@ -322,6 +324,50 @@ template <std::floating_point T>
 	return rc::gen::inRange<std::size_t>(0, bound);
 }
 
+/// Parameters of any of the four materials, all valid.
+[[nodiscard]] inline rc::Gen<MaterialParameters> material_parameters() {
+	return rc::gen::oneOf(
+			rc::gen::map(unit_colour(),
+			             [](const Colour& albedo) { return MaterialParameters{LambertianDescription{.albedo = albedo}}; }),
+			rc::gen::map(rc::gen::pair(unit_colour(), fuzz()),
+			             [](const std::pair<Colour, double>& parts) {
+										 return MaterialParameters{MetalDescription{.albedo = parts.first, .fuzz = parts.second}};
+									 }),
+			rc::gen::map(refractive_index(), [](double ior) { return MaterialParameters{GlassDescription{.ior = ior}}; }),
+			rc::gen::map(rc::gen::pair(unit_colour(), refractive_index()), [](const std::pair<Colour, double>& parts) {
+				return MaterialParameters{PlasticDescription{.albedo = parts.first, .ior = parts.second}};
+			}));
+}
+
+/// Sky with arbitrary colours in [0, 1].
+[[nodiscard]] inline rc::Gen<Sky> any_sky() {
+	return rc::gen::map(rc::gen::pair(unit_colour(), unit_colour()), [](const std::pair<Colour, Colour>& colours) {
+		return Sky{.top = colours.first, .bottom = colours.second};
+	});
+}
+
+/// Valid scene description: valid camera settings and sky, materials with distinct identifiers and valid
+/// parameters, and spheres, if there is any material, each made of one of them.
+[[nodiscard]] inline rc::Gen<SceneDescription> scene_description() {
+	return rc::gen::exec([] {
+		SceneDescription description{.camera = *camera_settings(), .sky = *any_sky(), .materials = {}, .spheres = {}};
+		for (const auto& name : *rc::gen::unique<std::vector<std::string>>(identifier())) {
+			description.materials.push_back({.name = name, .parameters = *material_parameters()});
+		}
+		if (!description.materials.empty()) {
+			const std::size_t count = *rc::gen::inRange<std::size_t>(0, 9);
+			for (std::size_t i = 0; i < count; ++i) {
+				description.spheres.push_back({
+						.centre = *finite_vector<double, 3>(),
+						.radius = *sphere_radius(),
+						.material = description.materials[*index_below(description.materials.size())].name,
+				});
+			}
+		}
+		return description;
+	});
+}
+
 } // namespace rt::test
 
 namespace rc {
@@ -368,6 +414,11 @@ struct Arbitrary<rt::Sphere> {
 template <>
 struct Arbitrary<rt::CameraSettings> {
 	static Gen<rt::CameraSettings> arbitrary() { return rt::test::camera_settings(); }
+};
+
+template <>
+struct Arbitrary<rt::SceneDescription> {
+	static Gen<rt::SceneDescription> arbitrary() { return rt::test::scene_description(); }
 };
 
 template <>

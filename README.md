@@ -319,7 +319,7 @@ include/rt/
   random/              sampler.hpp
   geometry/            hittable.hpp hit_record.hpp sphere.hpp
   materials/           material.hpp lambertian.hpp metal.hpp glass.hpp plastic.hpp specular_coat.hpp
-  scene/               scene.hpp camera.hpp registry.hpp
+  scene/               scene.hpp camera.hpp registry.hpp scene_description.hpp
   parsing/             tokeniser.hpp scene_parser.hpp
   render/              renderer.hpp render_settings.hpp worker_pool.hpp image.hpp
   io/                  image_writer.hpp ppm_writer.hpp
@@ -422,6 +422,15 @@ docs/
   materiały w `Registry<Material>`. Metoda `hit(ray, range)` zwraca najbliższe trafienie; `sky_colour(direction)`.
   Uzupełniana przez `add_material` (rzuca `DuplicateNameError`) i `add_object` (pusty wskaźnik → `Error`);
   `materials()`, `object_count()`. Nie da się jej skopiować (`= delete("...")`), można przenieść (`noexcept`).
+- `struct SceneDescription` (`scene_description.hpp`) — prosta, porównywalna (`==`), niewalidowana treść pliku
+  sceny: `CameraSettings`, `Sky`, `std::vector<MaterialDescription>` (nazwa + `std::variant` parametrów
+  `LambertianDescription`, `MetalDescription`, `GlassDescription`, `PlasticDescription`) i
+  `std::vector<SphereDescription>` (środek, promień, nazwa materiału), w kolejności dyrektyw. Opis nie zapamiętuje
+  przeplotu dyrektyw, więc regułę „materiał przed użyciem” sprawdza parser.
+- `Scene build_scene(const SceneDescription&)` — tworzy scenę, walidując opis po drodze: niepoprawny parametr
+  kamery, materiału lub kuli, pusta nazwa materiału i składowa koloru nieba `> 1` → `SceneError` z nazwą materiału
+  lub numerem kuli (od 1) w komunikacie; duplikat nazwy → `DuplicateNameError`, nieznany materiał →
+  `UnknownNameError`. `demo_scene_description()` zwraca scenę z [§ 5.5](#55-przykład).
 
 **Parsowanie**
 
@@ -576,6 +585,14 @@ Każdy wyjątek ma konstruktor przyjmujący opis i (gdzie ma to sens) dane konte
 - Niebo: `top` dokładnie w górę, `bottom` dokładnie w dół, pośrednie składowe między nimi; kolor zależy tylko od
   kierunku, nie od długości wektora.
 - Przeniesiona scena zachowuje obiekty i materiały.
+
+**SceneDescription i build_scene**
+
+- Dla dowolnego poprawnego opisu zbudowana scena ma opisane kamerę, niebo, materiały (rodzaj i parametry)
+  i liczbę kul; każda kula ma opisane położenie, promień i materiał.
+- Niepoprawne wartości → `SceneError`; duplikat nazwy → `DuplicateNameError`; nieznany materiał →
+  `UnknownNameError`.
+- Scena demonstracyjna buduje się i ma kule z odpowiednich materiałów w miejscach z [§ 5.5](#55-przykład).
 
 **Registry**
 
