@@ -296,9 +296,11 @@ Iteracyjnie (bez rekurencji), z wagą przepływu `throughput`, początkowo `(1, 
 
 ### 6.4. Piksel i obraz
 
-- Kolor piksela = średnia z `samples` próbek.
-- Korekcja gamma 2 (`sqrt` składowych), przycięcie do `[0, 1)`, tj. do największej liczby mniejszej od 1
-  (`std::nextafter(1.0, 0.0)`), kwantyzacja `⌊256 · c⌋` → `[0, 255]`.
+- Kolor piksela = średnia z `samples` próbek. Renderer zapisuje do `Image` właśnie tę średnią — kolor
+  **liniowy**, bez korekcji gamma i bez przycięcia (składowe mogą przekraczać 1).
+- Konwersję do pliku wykonuje **wyłącznie** zapis obrazu (`IImageWriter`), osobno dla każdej składowej: korekcja
+  gamma 2 (`sqrt`), przycięcie do `[0, 1)`, tj. do największej liczby mniejszej od 1 (`std::nextafter(1.0, 0.0)`),
+  kwantyzacja `⌊256 · c⌋` → `[0, 255]` (`Colour::gamma_corrected()`, następnie `Colour::quantised()`).
 - Plik wyjściowy: `P3`, `width height`, `255`, następnie piksele wierszami od góry, jeden piksel na wiersz
   (`r g b`).
 
@@ -476,7 +478,8 @@ docs/
 
 - `struct RenderSettings` — `width`, `height`, `samples`, `max_depth`, `seed`, `threads`; walidacja w konstruktorze.
 - `class Image` — `width`, `height`, prywatny `std::vector<Colour>`; `operator[](x, y)` (wersja `const`
-  i nie-`const`), rzuca `RangeError` poza zakresem.
+  i nie-`const`), rzuca `RangeError` poza zakresem. Przechowuje kolory liniowe (średnie próbek, składowe mogą
+  przekraczać 1); nie zna korekcji gamma ani kwantyzacji — patrz [§ 6.4](#64-piksel-i-obraz).
 - `class WorkerPool` — patrz [§ 6.6](#66-wielowątkowość); `void run(std::size_t task_count,
   std::function<void(std::size_t)> task)`; niekopiowalny.
 - `class Renderer` — **kompozycja** `WorkerPool`, **agregacja** `const Scene&` i `Logger&`; `Image render()`.
@@ -485,8 +488,12 @@ docs/
 
 - Interfejs `IImageWriter` — `virtual void write(const Image&, std::ostream&) const = 0;` oraz niewirtualna metoda
   `write_file(const Image&, const std::filesystem::path&) const` (wzorzec metody szablonowej; rzuca `IoError`).
+  Każdy zapis przekształca kolory liniowe z `Image` wg [§ 6.4](#64-piksel-i-obraz) (korekcja gamma, przycięcie,
+  kwantyzacja).
 - `class PpmWriter final : public IImageWriter` — format P3.
-- `Image read_ppm(std::istream&)` — minimalny czytnik P3 na potrzeby testów (część `rt_core`).
+- `Image read_ppm(std::istream&)` — minimalny czytnik P3 na potrzeby testów (część `rt_core`). Odwraca konwersję
+  zapisu: wartość `q` zamienia na kolor liniowy `((q + 0.5) / 256)²`, czyli środek przedziału kwantyzacji
+  po odwróceniu korekcji gamma, który zapis odwzorowuje z powrotem dokładnie na `q`.
 
 **Logowanie**
 
@@ -655,7 +662,11 @@ Każdy wyjątek ma konstruktor przyjmujący opis i (gdzie ma to sens) dane konte
 
 **Image / PPM**
 
-- „Tam i z powrotem”: `read_ppm(write(img))` równa się `img` po kwantyzacji.
+- „Tam i z powrotem”: `read_ppm(write(img))` ma te same wymiary co `img`, a każdy jego piksel po korekcji gamma
+  i kwantyzacji daje te same wartości co odpowiadający piksel `img`; w szczególności `write(read_ppm(write(img)))`
+  jest identyczne z `write(img)`.
+- Zapis nie zmienia kolorów liniowych inaczej niż wg [§ 6.4](#64-piksel-i-obraz): kolor o składowych `≥ 1` daje
+  `255`, czarny — `0`.
 - Nagłówek to `P3`, `width height`, `255`; liczba pikseli = `width · height`.
 - Dostęp poza zakresem rzuca wyjątek.
 
