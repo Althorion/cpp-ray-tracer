@@ -26,6 +26,9 @@ rt_add_test(test_camera)
 rt_add_test(test_scene)
 rt_add_test(test_scene_description)
 rt_add_test(test_validation)
+rt_add_test(test_render_settings)
+rt_add_test(test_image)
+rt_add_test(test_worker_pool)
 
 # Local Variables:
 # ispell-local-dictionary: "en-GB"

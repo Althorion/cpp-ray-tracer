@@ -59,7 +59,7 @@ CheckOptions:
   readability-identifier-naming.MacroDefinitionCase: UPPER_CASE
   readability-identifier-naming.IgnoreMainLikeFunctions: true
 
-  # Plain data structs (`HitRecord`, `Options`, `RenderSettings`) may expose their fields
+  # Plain data structs (`HitRecord`, `Options`, `CameraSettings`, `SceneDescription`) may expose their fields
   misc-non-private-member-variables-in-classes.IgnoreClassesWithAllMemberVariablesBeingPublic: true
   cppcoreguidelines-non-private-member-variables-in-classes.IgnoreClassesWithAllMemberVariablesBeingPublic: true
 

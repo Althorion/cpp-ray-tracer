@@ -7,16 +7,18 @@
 
 #include <cmath>
 #include <concepts>
+#include <cstddef>
 #include <optional>
 #include <string>
 #include <string_view>
 #include <type_traits>
 
-/// The limits on the parameters of a scene (README.md § 5.2), in one place.
+/// The limits on the parameters of a scene (README.md § 5.2) and of a render (README.md § 4), in one place.
 ///
 /// Each `check_*` function returns nothing for a valid value, and otherwise the reason why it is invalid, phrased for
 /// an error message. The constructors of the classes turn it into an exception with `validated`; the parser reports
-/// it as a `SceneParseError` with the position of the offending token, before any object is built.
+/// it as a `SceneParseError` with the position of the offending token, and the command line as a `CliError`, before
+/// any object is built.
 namespace rt::validation {
 
 /// Why a value is invalid; empty if it is valid.
@@ -112,6 +114,33 @@ inline constexpr double min_up_sine = 1e-9;
 	}
 	if (cross(up.normalised(), view.normalised()).length() < min_up_sine) {
 		return "the camera's up vector must not be parallel to its viewing direction";
+	}
+	return std::nullopt;
+}
+
+/// Largest width or height of a rendered image (README.md § 4).
+inline constexpr std::size_t max_image_side = 16384;
+
+/// The width or the height of a rendered image: in [1, `max_image_side`].
+[[nodiscard]] constexpr Problem check_image_side(std::size_t side) noexcept {
+	if (side < 1 || side > max_image_side) {
+		return "the width and the height of an image must lie in [1, 16384]";
+	}
+	return std::nullopt;
+}
+
+/// The number of samples per pixel: at least 1.
+[[nodiscard]] constexpr Problem check_samples(std::size_t samples) noexcept {
+	if (samples < 1) {
+		return "the number of samples per pixel must be at least 1";
+	}
+	return std::nullopt;
+}
+
+/// The number of worker threads: at least 1.
+[[nodiscard]] constexpr Problem check_threads(std::size_t threads) noexcept {
+	if (threads < 1) {
+		return "the number of threads must be at least 1";
 	}
 	return std::nullopt;
 }

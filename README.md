@@ -449,14 +449,17 @@ docs/
 
 **Walidacja** (`validation.hpp`)
 
-- Przestrzeń nazw `rt::validation` — jedyne miejsce, w którym zapisano ograniczenia z [§ 5.2](#52-dyrektywy);
-  korzystają z niej konstruktory (`Lambertian`, `Metal`, `Glass`, `Plastic`/`SpecularCoat`, `Sphere`, `Camera`),
-  `build_scene` i parser.
-- Funkcje `check_rgb`, `check_fuzz`, `check_ior`, `check_radius`, `check_fov`, `check_aperture`, `check_focus`
+- Przestrzeń nazw `rt::validation` — jedyne miejsce, w którym zapisano ograniczenia z [§ 5.2](#52-dyrektywy)
+  i [§ 4](#4-interfejs-wiersza-poleceń); korzystają z niej konstruktory (`Lambertian`, `Metal`, `Glass`,
+  `Plastic`/`SpecularCoat`, `Sphere`, `Camera`, `RenderSettings`, `WorkerPool`), `build_scene`, parser i wiersz
+  poleceń.
+- Funkcje `check_rgb`, `check_fuzz`, `check_ior`, `check_radius`, `check_fov`, `check_aperture`, `check_focus`,
+  `check_image_side` (`[1, max_image_side = 16384]`), `check_samples` (`≥ 1`), `check_threads` (`≥ 1`)
   (`constexpr`, `noexcept`) oraz `check_camera_axes(from, to, up)` zwracają `Problem` =
   `std::optional<std::string_view>`: brak wartości dla poprawnego argumentu, w przeciwnym razie opis problemu gotowy
   do komunikatu. Nie rzucają, więc każdy użytkownik zgłasza problem własnym wyjątkiem: konstruktory materiałów i kul
-  — `MathsError`, `Camera` i `build_scene` — `SceneError`, parser — `SceneParseError` z pozycją tokenu.
+  — `MathsError`, `Camera` i `build_scene` — `SceneError`, `RenderSettings` i `WorkerPool` — `RangeError`, parser —
+  `SceneParseError` z pozycją tokenu, wiersz poleceń — `CliError`.
 - `template <std::derived_from<Error> E> T validated(T value, Check check)` — zwraca `value` albo rzuca `E` z opisem
   problemu; używane w listach inicjalizacyjnych konstruktorów.
 - `check_camera_axes` nie przepełnia się nawet dla współrzędnych bliskich `±DBL_MAX` (różnica liczona z połówek).
@@ -476,12 +479,26 @@ docs/
 
 **Renderowanie**
 
-- `struct RenderSettings` — `width`, `height`, `samples`, `max_depth`, `seed`, `threads`; walidacja w konstruktorze.
-- `class Image` — `width`, `height`, prywatny `std::vector<Colour>`; `operator[](x, y)` (wersja `const`
-  i nie-`const`), rzuca `RangeError` poza zakresem. Przechowuje kolory liniowe (średnie próbek, składowe mogą
-  przekraczać 1); nie zna korekcji gamma ani kwantyzacji — patrz [§ 6.4](#64-piksel-i-obraz).
-- `class WorkerPool` — patrz [§ 6.6](#66-wielowątkowość); `void run(std::size_t task_count,
-  std::function<void(std::size_t)> task)`; niekopiowalny.
+- `class RenderSettings` — `resolution()` (`width()`, `height()`), `samples()`, `max_depth()`, `seed()`,
+  `threads()`; tworzona z zagregowanej struktury `RenderSettings::Parameters` (inicjalizacja desygnowana, wartości
+  domyślne jak w [§ 4](#4-interfejs-wiersza-poleceń), `threads` = `default_thread_count()`). Walidacja
+  w konstruktorze regułami `rt::validation` (bok obrazu w `[1, 16384]`, `samples ≥ 1`, `threads ≥ 1`; dowolne
+  `max_depth` i `seed`), naruszenie → `RangeError`; po konstrukcji niezmienna, więc niezmiennika nie da się złamać.
+  Porównywalna (`==`).
+- `class Image` — `width`, `height`, prywatny `std::vector<Colour>`; `operator[](x, y)` (wielowymiarowy, wersja
+  `const` i nie-`const`), rzuca `RangeError` poza zakresem. Przechowuje kolory liniowe (średnie próbek, składowe mogą
+  przekraczać 1); nie zna korekcji gamma ani kwantyzacji — patrz [§ 6.4](#64-piksel-i-obraz). Nowy obraz jest
+  czarny; bok `0` lub liczba pikseli większa niż mieści `std::vector` → `RangeError` (przed alokacją). Piksel `(0, 0)`
+  to lewy górny róg; `pixels()` — wszystkie piksele wierszami od góry (`std::span<const Colour>`), `row(y)` —
+  `std::span<Colour>` jednego wiersza (każdy wątek renderera pisze tylko przez własne wiersze). Kopiowalny,
+  przenoszalny, porównywalny (`==`).
+- `class WorkerPool` — patrz [§ 6.6](#66-wielowątkowość); konstruktor z liczbą wątków (`0` → `RangeError`);
+  `void run(std::size_t task_count, const std::function<void(std::size_t)>& task) const`. Każde wywołanie `run`
+  tworzy własne `std::jthread` (najwyżej `min(threads, task_count)`; wątek wywołujący tylko czeka), pobierające
+  kolejne indeksy ze wspólnego `std::atomic<std::size_t>`, i wraca po ich zakończeniu. Pierwszy wyjątek z zadania
+  zostaje zapamiętany (`std::exception_ptr`), wspólne `std::stop_source` powstrzymuje pobieranie dalszych zadań,
+  a po dołączeniu wątków wyjątek jest ponownie rzucany; wątek, którego zadanie rzuciło, kończy pracę od razu.
+  Niekopiowalny i nieprzenoszalny.
 - `class Renderer` — **kompozycja** `WorkerPool`, **agregacja** `const Scene&` i `Logger&`; `Image render()`.
 
 **Wejście-wyjście**
@@ -668,7 +685,9 @@ Każdy wyjątek ma konstruktor przyjmujący opis i (gdzie ma to sens) dane konte
 - Zapis nie zmienia kolorów liniowych inaczej niż wg [§ 6.4](#64-piksel-i-obraz): kolor o składowych `≥ 1` daje
   `255`, czarny — `0`.
 - Nagłówek to `P3`, `width height`, `255`; liczba pikseli = `width · height`.
-- Dostęp poza zakresem rzuca wyjątek.
+- `Image`: dostęp poza zakresem (`operator[]`, `row`) rzuca `RangeError`; nowy obraz jest czarny; zapis piksela nie
+  zmienia innych; `pixels()` zachowuje kolejność wierszami od lewego górnego rogu; kopia jest niezależna; obraz bez
+  pikseli lub zbyt duży → `RangeError`.
 
 **Renderer i WorkerPool**
 
@@ -679,6 +698,11 @@ Każdy wyjątek ma konstruktor przyjmujący opis i (gdzie ma to sens) dane konte
   (z tolerancją uwzględniającą jitter w obrębie piksela).
 - `WorkerPool::run` wywołuje zadanie dokładnie raz dla każdego indeksu; wyjątek z zadania jest ponownie rzucany
   w wątku wywołującym.
+- `WorkerPool`: zadania wykonują się na najwyżej `min(threads, task_count)` wątkach, nigdy w wątku wywołującym;
+  gdy każde zadanie rzuca, każdy wątek wykonuje najwyżej jedno; przy jednym wątku zadania idą po kolei i pierwszy
+  wyjątek przerywa resztę; pula działa dalej po wyjątku; zapisy zadań są widoczne po powrocie z `run` (TSan).
+- `RenderSettings`: poprawne parametry zachowane bez zmian; bok spoza `[1, 16384]`, `samples = 0`, `threads = 0` →
+  `RangeError`; wartości domyślne zgodne z [§ 4](#4-interfejs-wiersza-poleceń).
 - Testy renderera używają małych rozdzielczości (≤ 16×16) i małej liczby próbek, by były szybkie.
 
 **Logger i CLI**

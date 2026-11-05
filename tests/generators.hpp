@@ -13,9 +13,12 @@
 #include "rt/maths/ray.hpp"
 #include "rt/maths/vector.hpp"
 #include "rt/random/sampler.hpp"
+#include "rt/render/image.hpp"
+#include "rt/render/render_settings.hpp"
 #include "rt/scene/camera.hpp"
 #include "rt/scene/scene.hpp"
 #include "rt/scene/scene_description.hpp"
+#include "rt/validation.hpp"
 
 #include <rapidcheck.h>
 
@@ -330,6 +333,54 @@ template <typename T>
 	return rc::gen::inRange<std::size_t>(0, bound);
 }
 
+/// Side of a test image; small, as each test case allocates its images.
+[[nodiscard]] inline rc::Gen<std::size_t> image_side() { return rc::gen::inRange<std::size_t>(1, 33); }
+
+/// Image of an `image_side` by `image_side` size, with linear colours that may exceed 1.
+[[nodiscard]] inline rc::Gen<Image> any_image() {
+	return rc::gen::exec([] {
+		Image image{*image_side(), *image_side()};
+		for (std::size_t y = 0; y < image.height(); ++y) {
+			for (std::size_t x = 0; x < image.width(); ++x) {
+				image[x, y] = *bright_colour();
+			}
+		}
+		return image;
+	});
+}
+
+/// Valid side of a rendered image, in [1, 16384], with both ends generated often.
+[[nodiscard]] inline rc::Gen<std::size_t> render_side() {
+	return rc::gen::weightedOneOf<std::size_t>({
+			{4, rc::gen::inRange<std::size_t>(1, validation::max_image_side + 1)},
+			{1, rc::gen::element<std::size_t>(1, validation::max_image_side)},
+	});
+}
+
+/// Side of a rendered image outside [1, 16384].
+[[nodiscard]] inline rc::Gen<std::size_t> invalid_render_side() {
+	return rc::gen::weightedOneOf<std::size_t>({
+			{1, rc::gen::just<std::size_t>(0)},
+			{2, rc::gen::inRange<std::size_t>(validation::max_image_side + 1, std::numeric_limits<std::size_t>::max())},
+	});
+}
+
+/// Valid render parameters, every one of them set.
+[[nodiscard]] inline rc::Gen<RenderSettings::Parameters> render_parameters() {
+	return rc::gen::exec([] {
+		return RenderSettings::Parameters{
+				.resolution = Resolution{.width = *render_side(), .height = *render_side()},
+				.samples = *rc::gen::inRange<std::size_t>(1, 10'001),
+				.max_depth = *rc::gen::inRange<std::size_t>(0, 1001),
+				.seed = *rc::gen::arbitrary<std::uint64_t>(),
+				.threads = *rc::gen::inRange<std::size_t>(1, 257),
+		};
+	});
+}
+
+/// Thread count for worker pool tests: from one thread up to more than most machines have cores.
+[[nodiscard]] inline rc::Gen<std::size_t> thread_count() { return rc::gen::inRange<std::size_t>(1, 17); }
+
 /// Parameters of any of the four materials, all valid.
 [[nodiscard]] inline rc::Gen<MaterialParameters> material_parameters() {
 	return rc::gen::oneOf(
@@ -420,6 +471,16 @@ struct Arbitrary<rt::Sphere> {
 template <>
 struct Arbitrary<rt::CameraSettings> {
 	static Gen<rt::CameraSettings> arbitrary() { return rt::test::camera_settings(); }
+};
+
+template <>
+struct Arbitrary<rt::Image> {
+	static Gen<rt::Image> arbitrary() { return rt::test::any_image(); }
+};
+
+template <>
+struct Arbitrary<rt::RenderSettings::Parameters> {
+	static Gen<rt::RenderSettings::Parameters> arbitrary() { return rt::test::render_parameters(); }
 };
 
 template <>
