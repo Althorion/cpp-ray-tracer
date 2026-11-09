@@ -735,6 +735,20 @@ Każdy wyjątek ma konstruktor przyjmujący opis i (gdzie ma to sens) dane konte
 - `const`-poprawność, `[[nodiscard]]` dla funkcji zwracających wartości, `noexcept` tam, gdzie gwarantowane.
 - Brak zmiennych globalnych z modyfikowalnym stanem (poza statycznymi licznikami opartymi na `std::atomic`).
 
+### 10.1. Narzędzia do rozważenia
+
+Poniższe narzędzia nie są wymaganiami; warto wrócić do nich, gdy projekt będzie bliski ukończenia.
+
+- **libFuzzer** (`-fsanitize=fuzzer`, dostępny w Clang 23) — cel fuzzujący dla `Tokeniser` i `SceneParser`, budowany
+  z ASan/UBSan (jak preset `clang-asan`), z plikami z `scenes/` jako korpusem startowym. Parser przetwarza niezaufane
+  dane wejściowe, więc jest tu najbardziej prawdopodobnym źródłem realnych błędów. Cel powinien traktować jako błąd
+  każdy wyjątek spoza hierarchii `rt::Error`, a dla poprawnych wejść sprawdzać, czy przejście parsowanie →
+  `serialise` → parsowanie daje równy `SceneDescription`.
+- **CodeChecker** — uruchamianie Clang Static Analyzera z analizą między jednostkami translacji (`--ctu`) na podstawie
+  `compile_commands.json`, z obecnym kompilatorem. Rozszerza sprawdzenia `clang-analyzer-*` wykonywane przez clang-tidy
+  w obrębie pojedynczej jednostki. Zysk zależy od tego, ile implementacji znajdzie się ostatecznie w plikach `.cpp`:
+  kod w nagłówkach jest analizowany także bez `--ctu`.
+
 ## 11. Kryteria akceptacji
 
 1. `cmake --preset gcc-release && cmake --build --preset gcc-release` oraz to samo dla Clang kończy się sukcesem.
