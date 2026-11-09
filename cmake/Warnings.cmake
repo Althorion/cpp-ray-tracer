@@ -11,8 +11,9 @@ if(RT_ENABLE_CLANG_TIDY)
 	endif()
 endif()
 
-# Applies the project's warning flags and, if enabled, clang-tidy to `target`.
+# Applies the project's warning flags, optimisation settings and, if enabled, clang-tidy to `target`.
 function(rt_configure_target target)
+	rt_configure_optimisation(${target})
 	target_compile_options(${target} PRIVATE
 		-Wall
 		-Wextra

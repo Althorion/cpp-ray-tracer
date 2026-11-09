@@ -84,6 +84,12 @@ Szczegóły:
 - **rapidcheck** budowany przez własny `CMakeLists.txt`, linkowany wyłącznie do celów testowych.
 - Flagi ostrzeżeń (oba kompilatory): `-Wall -Wextra -Wpedantic -Wconversion -Wsign-conversion -Wshadow
   -Wnon-virtual-dtor -Wold-style-cast -Woverloaded-virtual`; `-Werror` w presetach CI.
+- Optymalizacja (cele projektu, `cmake/Optimisation.cmake`): presety `*-release` używają LTO (właściwość CMake
+  `INTERPROCEDURAL_OPTIMIZATION`, opcja `RT_ENABLE_LTO`) i `-march=native` (opcja `RT_NATIVE_ARCH`), więc pliki binarne
+  mogą nie działać na innych procesorach. `gcc-debug` także linkuje z LTO, bo tylko wtedy GCC wykrywa naruszenia ODR
+  i niezgodne deklaracje między jednostkami translacji (`-Wodr -Wlto-type-mismatch`, błędy przy
+  `RT_WARNINGS_AS_ERRORS`); Clang nie ma odpowiednika tych ostrzeżeń. `gcc-debug` kompiluje też z `-Og` (testy około
+  sześciu razy szybsze niż przy `-O0`), a `clang-debug` pozostaje przy `-O0` jako konfiguracja bez optymalizacji.
 - Presety: `gcc-debug`, `gcc-release`, `clang-debug`, `clang-release`, `clang-asan` (AddressSanitizer +
   UndefinedBehaviorSanitizer), `clang-tsan` (ThreadSanitizer).
 - Cele CMake: biblioteka statyczna `rt_core` (cała logika), plik wykonywalny `raytracer` (tylko `main.cpp`), pliki
@@ -309,6 +315,13 @@ Iteracyjnie (bez rekurencji), z wagą przepływu `throughput`, początkowo `(1, 
 - Generator: `pcg32` opakowany w klasę `Sampler`.
 - Każdy piksel ma **własny strumień**: `pcg32(seed, y · width + x)`. Wynik renderowania zależy więc wyłącznie od
   sceny, rozdzielczości, `samples`, `depth` i `seed` — **nie** od liczby wątków ani kolejności ich pracy.
+- Ta gwarancja dotyczy **jednego pliku binarnego**. Obrazy z różnych kompilacji (inny kompilator, inne flagi, inny
+  procesor przy `-march=native`) mogą się różnić: gdy dostępne jest FMA, kompilator może łączyć mnożenie z dodawaniem
+  (GCC domyślnie robi to z `-ffp-contract=fast`, Clang w obrębie wyrażenia z `-ffp-contract=on`), co zmienia
+  zaokrąglenia. Gdyby potrzebna była powtarzalność między kompilacjami, punktem wyjścia jest `-ffp-contract=off`.
+  Nie wystarcza to jednak do zgodności co do bitu: IEEE 754 nie wymaga poprawnego zaokrąglania `std::sin`, `std::cos`
+  i `std::tan` (w przeciwieństwie do `+`, `*` i `std::sqrt`), więc ich wyniki mogą zależeć od wersji biblioteki
+  matematycznej. Pełna powtarzalność wymagałaby też przypięcia tej biblioteki lub użycia poprawnie zaokrąglającej.
 
 ### 6.6. Wielowątkowość
 

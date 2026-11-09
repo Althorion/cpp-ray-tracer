@@ -17,6 +17,7 @@ option(RT_BUILD_TESTS "Build the property-based tests" ON)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(Warnings)
+include(Optimisation)
 include(Dependencies)
 
 # All program logic lives in this library; executables only link against it.
