@@ -23,6 +23,7 @@ include(Dependencies)
 # All program logic lives in this library; executables only link against it.
 add_library(rt_core STATIC
 	src/errors.cpp
+	src/renderer.cpp
 	src/worker_pool.cpp
 )
 target_include_directories(rt_core PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")

@@ -29,6 +29,7 @@ rt_add_test(test_validation)
 rt_add_test(test_render_settings)
 rt_add_test(test_image)
 rt_add_test(test_worker_pool)
+rt_add_test(test_renderer)
 
 # Local Variables:
 # ispell-local-dictionary: "en-GB"

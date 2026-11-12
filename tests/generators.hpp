@@ -376,6 +376,27 @@ template <typename T>
 	});
 }
 
+/// Render parameters for renderer tests, small enough to be quick (README.md § 8.2): up to 8×8 pixels, up to 4
+/// samples, a depth up to 8 and up to 8 threads.
+[[nodiscard]] inline rc::Gen<RenderSettings::Parameters> small_render_parameters() {
+	return rc::gen::exec([] {
+		return RenderSettings::Parameters{
+				.resolution =
+						Resolution{
+								.width = *rc::gen::inRange<std::size_t>(1, 9),
+								.height = *rc::gen::inRange<std::size_t>(1, 9),
+						},
+				.samples = *rc::gen::inRange<std::size_t>(1, 5),
+				.max_depth = *rc::gen::inRange<std::size_t>(0, 9),
+				.seed = *rc::gen::arbitrary<std::uint64_t>(),
+				.threads = *rc::gen::inRange<std::size_t>(1, 9),
+		};
+	});
+}
+
+/// More than one thread, up to 8, for comparing a parallel render with a single-threaded one (README.md § 8.2).
+[[nodiscard]] inline rc::Gen<std::size_t> parallel_thread_count() { return rc::gen::inRange<std::size_t>(2, 9); }
+
 /// Thread count for worker pool tests: from one thread up to more than most machines have cores.
 [[nodiscard]] inline rc::Gen<std::size_t> thread_count() { return rc::gen::inRange<std::size_t>(1, 17); }
 
