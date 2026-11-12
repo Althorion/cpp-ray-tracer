@@ -761,6 +761,13 @@ Poniższe narzędzia nie są wymaganiami; warto wrócić do nich, gdy projekt b�
   `compile_commands.json`, z obecnym kompilatorem. Rozszerza sprawdzenia `clang-analyzer-*` wykonywane przez clang-tidy
   w obrębie pojedynczej jednostki. Zysk zależy od tego, ile implementacji znajdzie się ostatecznie w plikach `.cpp`:
   kod w nagłówkach jest analizowany także bez `--ctu`.
+- **Mull** — testy mutacyjne: sprawdzenie, czy własności z [§ 8.2](#82-wymagane-własności) wykrywają drobne zmiany
+  w kodzie (operator, stała, usunięta instrukcja). Mull mutuje LLVM IR, więc nie przebudowuje projektu dla każdego
+  mutanta; wymaga jednak pakietu zbudowanego dla używanej wersji LLVM. Wersja 0.38.0 (listopad 2026) obsługuje LLVM 23
+  tylko na macOS — przed ukończeniem projektu trzeba sprawdzić, czy jest już pakiet dla Linuksa. Odrzucony zamiennik:
+  mutate_cpp (nieutrzymywany, nie działa z aktualnymi wersjami swoich zależności w Pythonie). Do testów mutacyjnych
+  potrzebne będzie stałe ziarno rapidchecka (`RC_PARAMS`), inaczej ten sam mutant raz ginie, a raz przeżywa; przeżywające
+  mutanty w kodzie zmiennoprzecinkowym trzeba oceniać ręcznie, bo wiele z nich jest równoważnych.
 
 ## 11. Kryteria akceptacji
 
