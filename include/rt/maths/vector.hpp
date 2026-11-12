@@ -12,6 +12,7 @@
 #include <functional>
 #include <numeric>
 #include <ostream>
+#include <ranges>
 
 namespace rt {
 
@@ -139,7 +140,7 @@ public:
 
 	/// May overflow to infinity: the result is a scalar, not a vector.
 	[[nodiscard]] friend constexpr T dot(const Vector& lhs, const Vector& rhs) noexcept {
-		return std::inner_product(lhs.components_.begin(), lhs.components_.end(), rhs.components_.begin(), T{0});
+		return std::inner_product(lhs.begin(), lhs.end(), rhs.begin(), T{0});
 	}
 
 	/// @throws MathsError if the result overflows.
@@ -221,11 +222,7 @@ private:
 	}
 
 	[[nodiscard]] constexpr T max_magnitude() const noexcept {
-		T largest{0};
-		for (const T component : components_) {
-			largest = std::max(largest, std::abs(component));
-		}
-		return largest;
+		return std::ranges::max(components_ | std::views::transform([](T component) { return std::abs(component); }));
 	}
 
 	/// Applies `operation` component-wise; `*this` changes only if the result keeps the invariant.

@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <memory>
+#include <ranges>
 #include <set>
 #include <string>
 #include <string_view>
@@ -96,7 +97,7 @@ void check_properties(Suite& suite) {
 				++duplicates;
 			}
 		}
-		const std::size_t distinct = std::set<std::string>(names.begin(), names.end()).size();
+		const std::size_t distinct = std::ranges::to<std::set>(names).size();
 		RC_ASSERT(registry.size() == distinct);
 		RC_ASSERT(duplicates == names.size() - distinct);
 		for (const auto& name : names) {
