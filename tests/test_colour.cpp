@@ -4,11 +4,13 @@
 
 #include <rapidcheck/Assertions.h>
 
+#include <algorithm>
 #include <array>
 #include <cmath>
-#include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <limits>
+#include <ranges>
 #include <sstream>
 #include <type_traits>
 
@@ -26,12 +28,7 @@ static_assert(!std::is_convertible_v<Vec3, Colour>, "a vector becomes a colour o
 /// Whether every channel of `lower` is at most the corresponding channel of `upper`.
 [[nodiscard]] bool channels_ordered(const std::array<std::uint8_t, 3>& lower,
                                     const std::array<std::uint8_t, 3>& upper) {
-	for (std::size_t i = 0; i < lower.size(); ++i) {
-		if (lower.at(i) > upper.at(i)) {
-			return false;
-		}
-	}
-	return true;
+	return std::ranges::equal(lower, upper, std::less_equal{});
 }
 
 [[nodiscard]] bool components_ordered(const Colour& lower, const Colour& upper) {
@@ -60,8 +57,8 @@ void check_properties(Suite& suite) {
 		const Colour colour = *bright_colour();
 		const auto channels = colour.quantised();
 		const std::array<double, 3> components{colour.r(), colour.g(), colour.b()};
-		for (std::size_t i = 0; i < channels.size(); ++i) {
-			RC_ASSERT((channels.at(i) == 255) == (components.at(i) >= 255.0 / 256.0));
+		for (const auto [channel, component] : std::views::zip(channels, components)) {
+			RC_ASSERT((channel == 255) == (component >= 255.0 / 256.0));
 		}
 	});
 

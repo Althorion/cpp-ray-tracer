@@ -118,9 +118,9 @@ public:
 		// needs clamping; multiplying by 256 is exact, so the product cannot round up to 256.
 		const double max_intensity = std::nextafter(1.0, 0.0);
 		std::array<std::uint8_t, 3> channels{};
-		for (std::size_t i = 0; i < channels.size(); ++i) {
-			channels.at(i) = static_cast<std::uint8_t>(256.0 * std::min(rgb_[i], max_intensity));
-		}
+		std::ranges::transform(rgb_, channels.begin(), [max_intensity](double component) {
+			return static_cast<std::uint8_t>(256.0 * std::min(component, max_intensity));
+		});
 		return channels;
 	}
 
@@ -145,8 +145,8 @@ private:
 	}
 
 	[[nodiscard]] static constexpr Vec3 validated(const Vec3& rgb) {
-		for (std::size_t i = 0; i < 3; ++i) {
-			require_non_negative(rgb[i], "colour components must not be negative");
+		for (const double component : rgb) {
+			require_non_negative(component, "colour components must not be negative");
 		}
 		return rgb;
 	}

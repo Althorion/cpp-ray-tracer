@@ -73,6 +73,11 @@ public:
 
 	// NOLINTEND(cppcoreguidelines-pro-bounds-constant-array-index)
 
+	/// Read-only iteration over the components. There are deliberately no mutable iterators: writing through one
+	/// would bypass the finiteness check of `set`.
+	[[nodiscard]] constexpr auto begin() const noexcept { return components_.cbegin(); }
+	[[nodiscard]] constexpr auto end() const noexcept { return components_.cend(); }
+
 	constexpr Vector& operator+=(const Vector& rhs) { return combine(rhs, std::plus{}); }
 	constexpr Vector& operator-=(const Vector& rhs) { return combine(rhs, std::minus{}); }
 	constexpr Vector& operator*=(const Vector& rhs) { return combine(rhs, std::multiplies{}); }
@@ -267,13 +272,13 @@ struct std::formatter<rt::Vector<T, N>, CharT> {
 	auto format(const rt::Vector<T, N>& vector, FormatContext& context) const {
 		auto out = context.out();
 		*out++ = CharT{'('};
-		for (std::size_t i = 0; i < N; ++i) {
-			if (i > 0) {
+		for (std::size_t i = 0; const T component : vector) {
+			if (i++ > 0) {
 				*out++ = CharT{','};
 				*out++ = CharT{' '};
 			}
 			context.advance_to(out);
-			out = component_.format(vector[i], context);
+			out = component_.format(component, context);
 		}
 		*out++ = CharT{')'};
 		return out;

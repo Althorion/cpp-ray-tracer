@@ -53,12 +53,7 @@ template <std::floating_point T>
 /// Component-wise `approx_equal`.
 template <std::floating_point T, std::size_t N>
 [[nodiscard]] bool approx_equal(const Vector<T, N>& a, const Vector<T, N>& b, T eps = default_eps<T>) {
-	for (std::size_t i = 0; i < N; ++i) {
-		if (!approx_equal(a[i], b[i], eps)) {
-			return false;
-		}
-	}
-	return true;
+	return std::ranges::equal(a, b, [eps](T x, T y) { return approx_equal(x, y, eps); });
 }
 
 /// Draws per statistical check; enough for `mean_is_close` to be sharp.

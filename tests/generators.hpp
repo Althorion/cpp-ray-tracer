@@ -341,9 +341,7 @@ template <typename T>
 	return rc::gen::exec([] {
 		Image image{*image_side(), *image_side()};
 		for (std::size_t y = 0; y < image.height(); ++y) {
-			for (std::size_t x = 0; x < image.width(); ++x) {
-				image[x, y] = *bright_colour();
-			}
+			std::ranges::generate(image.row(y), [] { return *bright_colour(); });
 		}
 		return image;
 	});

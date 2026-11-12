@@ -15,10 +15,10 @@
 
 #include <algorithm>
 #include <cmath>
-#include <cstddef>
 #include <memory>
 #include <numbers>
 #include <optional>
+#include <ranges>
 #include <string>
 #include <type_traits>
 #include <vector>
@@ -323,9 +323,9 @@ void check_examples(Suite& suite) {
 				std::make_shared<const Metal>("gold", Colour{0.8, 0.6, 0.2}, 0.1),
 		};
 		const std::vector<std::string> names{"ground", "red", "glass", "gold"};
-		for (std::size_t i = 0; i < materials.size(); ++i) {
-			const INamed& named = *materials.at(i);
-			RC_ASSERT(named.name() == names.at(i));
+		for (const auto& [material, name] : std::views::zip(materials, names)) {
+			const INamed& named = *material;
+			RC_ASSERT(named.name() == name);
 		}
 	});
 }

@@ -15,9 +15,9 @@
 #include "rt/validation.hpp"
 
 #include <concepts>
-#include <cstddef>
 #include <format>
 #include <memory>
+#include <ranges>
 #include <string>
 #include <variant>
 #include <vector>
@@ -135,8 +135,7 @@ namespace detail {
 		scene.add_material(built);
 	}
 
-	for (std::size_t i = 0; i < description.spheres.size(); ++i) {
-		const SphereDescription& sphere = description.spheres[i];
+	for (const auto& [i, sphere] : std::views::enumerate(description.spheres)) {
 		const auto& material = scene.materials().get(sphere.material);
 		try {
 			scene.add_object(std::make_unique<Sphere>(sphere.centre, sphere.radius, material));
