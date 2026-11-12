@@ -95,9 +95,10 @@ private:
 		return stream;
 	}
 
-	/// 2^−n, exactly.
+	/// 2^−n, exactly. `consteval` so that it is never left to run per sample in unoptimised builds; `std::ldexp`
+	/// cannot replace it, as neither libstdc++ nor Clang can evaluate it at compile time yet.
 	template <std::floating_point T>
-	[[nodiscard]] static constexpr T inverse_power_of_two(unsigned n) noexcept {
+	[[nodiscard]] static consteval T inverse_power_of_two(unsigned n) noexcept {
 		T result{1};
 		for (unsigned i = 0; i < n; ++i) {
 			result /= 2;
@@ -112,12 +113,13 @@ private:
 		constexpr auto word_bits = static_cast<unsigned>(std::numeric_limits<pcg32::result_type>::digits);
 		static_assert(digits <= 2 * word_bits, "at most two outputs are drawn per value");
 		constexpr unsigned drawn = digits > word_bits ? 2 * word_bits : word_bits;
+		constexpr T scale = inverse_power_of_two<T>(digits);
 		std::uint64_t bits = engine_();
 		if constexpr (drawn > word_bits) {
 			bits = (bits << word_bits) | engine_();
 		}
 		bits >>= drawn - digits;
-		return static_cast<T>(bits) * inverse_power_of_two<T>(digits);
+		return static_cast<T>(bits) * scale;
 	}
 };
 
