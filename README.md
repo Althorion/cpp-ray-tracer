@@ -509,7 +509,7 @@ docs/
   `std::span<Colour>` jednego wiersza (każdy wątek renderera pisze tylko przez własne wiersze). Kopiowalny,
   przenoszalny, porównywalny (`==`).
 - `class WorkerPool` — patrz [§ 6.6](#66-wielowątkowość); konstruktor z liczbą wątków (`0` → `RangeError`);
-  `void run(std::size_t task_count, const std::function<void(std::size_t)>& task) const`. Każde wywołanie `run`
+  `void run(std::size_t task_count, std::function_ref<void(std::size_t)> task) const`. Każde wywołanie `run`
   tworzy własne `std::jthread` (najwyżej `min(threads, task_count)`; wątek wywołujący tylko czeka), pobierające
   kolejne indeksy ze wspólnego `std::atomic<std::size_t>`, i wraca po ich zakończeniu. Pierwszy wyjątek z zadania
   zostaje zapamiętany (`std::exception_ptr`), wspólne `std::stop_source` powstrzymuje pobieranie dalszych zadań,

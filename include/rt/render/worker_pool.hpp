@@ -20,10 +20,10 @@ public:
 	explicit WorkerPool(std::size_t threads)
 			: threads_{validation::validated<RangeError>(threads, validation::check_threads)} {}
 
-	WorkerPool(const WorkerPool&) = delete;
-	WorkerPool& operator=(const WorkerPool&) = delete;
-	WorkerPool(WorkerPool&&) = delete;
-	WorkerPool& operator=(WorkerPool&&) = delete;
+	WorkerPool(const WorkerPool&) = delete ("a worker pool stands for its threads; create another one");
+	WorkerPool& operator=(const WorkerPool&) = delete ("a worker pool stands for its threads; create another one");
+	WorkerPool(WorkerPool&&) = delete ("a worker pool stands for its threads; create another one");
+	WorkerPool& operator=(WorkerPool&&) = delete ("a worker pool stands for its threads; create another one");
 	~WorkerPool() = default;
 
 	[[nodiscard]] std::size_t threads() const noexcept { return threads_; }
@@ -35,7 +35,7 @@ public:
 	/// exception is re-thrown here.
 	///
 	/// @throws std::system_error if a thread cannot be started.
-	void run(std::size_t task_count, const std::function<void(std::size_t)>& task) const;
+	void run(std::size_t task_count, std::function_ref<void(std::size_t)> task) const;
 
 private:
 	std::size_t threads_;

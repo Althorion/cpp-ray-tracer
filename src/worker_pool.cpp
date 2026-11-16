@@ -12,7 +12,7 @@
 
 namespace rt {
 
-void WorkerPool::run(std::size_t task_count, const std::function<void(std::size_t)>& task) const {
+void WorkerPool::run(std::size_t task_count, std::function_ref<void(std::size_t)> task) const {
 	std::atomic<std::size_t> next{0};
 	std::stop_source stop;
 	std::mutex failure_mutex;

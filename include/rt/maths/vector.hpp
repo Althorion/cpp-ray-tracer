@@ -12,6 +12,7 @@
 #include <functional>
 #include <numeric>
 #include <ostream>
+#include <print>
 #include <ranges>
 
 namespace rt {
@@ -192,11 +193,8 @@ public:
 	}
 
 	friend std::ostream& operator<<(std::ostream& stream, const Vector& vector) {
-		stream << '(';
-		for (std::size_t i = 0; const T component : vector.components_) {
-			stream << (i++ == 0 ? "" : ", ") << component;
-		}
-		return stream << ')';
+		std::print(stream, "{}", vector);
+		return stream;
 	}
 
 private:
@@ -263,26 +261,24 @@ using Point3 = Vec3;
 /// Formats as `(x, y, z)`; the format specification applies to every component: `std::format("{:.2f}", v)`.
 template <std::floating_point T, std::size_t N, typename CharT>
 struct std::formatter<rt::Vector<T, N>, CharT> {
-	constexpr auto parse(std::basic_format_parse_context<CharT>& context) { return component_.parse(context); }
+	constexpr formatter() {
+		static constexpr std::array<CharT, 1> open{CharT{'('}};
+		static constexpr std::array<CharT, 1> close{CharT{')'}};
+		components_.set_brackets({open.data(), open.size()}, {close.data(), close.size()});
+	}
+
+	// Parses the component's specification, not a range's, so that `{:.2f}` rather than `{::.2f}` applies to each.
+	constexpr auto parse(std::basic_format_parse_context<CharT>& context) {
+		return components_.underlying().parse(context);
+	}
 
 	template <typename FormatContext>
 	auto format(const rt::Vector<T, N>& vector, FormatContext& context) const {
-		auto out = context.out();
-		*out++ = CharT{'('};
-		for (std::size_t i = 0; const T component : vector) {
-			if (i++ > 0) {
-				*out++ = CharT{','};
-				*out++ = CharT{' '};
-			}
-			context.advance_to(out);
-			out = component_.format(component, context);
-		}
-		*out++ = CharT{')'};
-		return out;
+		return components_.format(vector, context);
 	}
 
 private:
-	std::formatter<T, CharT> component_;
+	std::range_formatter<T, CharT> components_;
 };
 
 #endif // RT_MATHS_VECTOR_HPP

@@ -29,10 +29,10 @@ public:
 	Renderer(const Scene&&, const RenderSettings&) = delete ("the renderer keeps a reference to the scene, which a "
 	                                                         "temporary would not outlive");
 
-	Renderer(const Renderer&) = delete;
-	Renderer& operator=(const Renderer&) = delete;
-	Renderer(Renderer&&) = delete;
-	Renderer& operator=(Renderer&&) = delete;
+	Renderer(const Renderer&) = delete ("a renderer owns a worker pool, which cannot be copied or moved");
+	Renderer& operator=(const Renderer&) = delete ("a renderer owns a worker pool, which cannot be copied or moved");
+	Renderer(Renderer&&) = delete ("a renderer owns a worker pool, which cannot be copied or moved");
+	Renderer& operator=(Renderer&&) = delete ("a renderer owns a worker pool, which cannot be copied or moved");
 	~Renderer() = default;
 
 	[[nodiscard]] const RenderSettings& settings() const noexcept { return settings_; }
