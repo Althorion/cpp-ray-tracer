@@ -109,7 +109,10 @@ z [§ 3](#3-stos-technologiczny-i-budowanie). Przewidywane do użycia (jeśli ob
   błędy przekraczające granice modułów sygnalizujemy wyjątkami.
 
 Kontrakty (P2900) i statyczna refleksja (P2996) są **opcjonalne**: można ich użyć tylko wtedy, gdy oba kompilatory je
-obsługują, i tylko w sposób, który nie zmienia zachowania programu.
+obsługują, i tylko w sposób, który nie zmienia zachowania programu. Stan refleksji (sprawdzony w listopadzie 2026):
+GCC 16.2 obsługuje ją z flagą `-freflection`, Clang 23.1 nie obsługuje jej wcale (brak składni `^^` i nagłówka
+`<meta>`), więc na razie jej nie używamy; clang-tidy, oparty na Clangu, nie przetworzyłby takiego kodu nawet w presetach
+GCC.
 
 ## 4. Interfejs wiersza poleceń
 
