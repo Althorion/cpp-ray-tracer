@@ -766,8 +766,8 @@ Poniższe narzędzia nie są wymaganiami; warto wrócić do nich, gdy projekt b�
   mutanta; wymaga jednak pakietu zbudowanego dla używanej wersji LLVM. Wersja 0.38.0 (listopad 2026) obsługuje LLVM 23
   tylko na macOS — przed ukończeniem projektu trzeba sprawdzić, czy jest już pakiet dla Linuksa. Odrzucony zamiennik:
   mutate_cpp (nieutrzymywany, nie działa z aktualnymi wersjami swoich zależności w Pythonie). Do testów mutacyjnych
-  potrzebne będzie stałe ziarno rapidchecka (`RC_PARAMS`), inaczej ten sam mutant raz ginie, a raz przeżywa; przeżywające
-  mutanty w kodzie zmiennoprzecinkowym trzeba oceniać ręcznie, bo wiele z nich jest równoważnych.
+  potrzebne będzie stałe ziarno rapidchecka (`RC_PARAMS`), inaczej ten sam mutant raz ginie, a raz przeżywa;
+  przeżywające mutanty w kodzie zmiennoprzecinkowym trzeba oceniać ręcznie, bo wiele z nich jest równoważnych.
 
 ## 11. Kryteria akceptacji
 
@@ -781,39 +781,123 @@ Poniższe narzędzia nie są wymaganiami; warto wrócić do nich, gdy projekt b�
 
 ## 12. Mapa wymagań obiektowych
 
-| Wymaganie                        | Gdzie w projekcie                                                                 |
-|----------------------------------|-----------------------------------------------------------------------------------|
-| Hermetyzacja (ukrywanie danych)  | Prywatne składowe wszystkich klas z niezmiennikami (`Ray`, `Colour`, `Sphere`,    |
-|                                  | `Image`, `Camera`); `Sampler` ukrywa `pcg32`                                      |
-| Enkapsulacja (dane + operacje)   | `Vector`, `Image`, `Camera`, `Scene`, `Logger` — operacje na danych tylko przez   |
-|                                  | metody                                                                            |
-| Konstruktory                     | Walidujące (`Vector`, `Ray`, `Sphere`, `Colour`, `Camera`, `RenderSettings`),     |
-|                                  | domyślne, kopiujące/przenoszące (`Vector`, `Image`), `explicit`, `constexpr`,     |
-|                                  | delegujące, usunięte z powodem (`Scene`, `Logger`, `WorkerPool`)                  |
-| Dziedziczenie pojedyncze         | `Sphere : IHittable`, `Metal/Glass/Lambertian : Material`,                        |
-|                                  | `StderrSink/FileSink : StreamSink`, hierarchia wyjątków                           |
-| Dziedziczenie wielokrotne        | `Material : IScatterer, INamed` (interfejsy);                                     |
-|                                  | `Plastic : Lambertian, private SpecularCoat` (implementacja)                      |
-| Interfejsy                       | `IHittable`, `IScatterer`, `INamed`, `ILogSink`, `IImageWriter`                   |
-| Klasy i metody abstrakcyjne      | `Material` (abstrakcyjna, `scatter` czysto wirtualne), `StreamSink` (`stream()`   |
-|                                  | czysto wirtualne)                                                                 |
-| Polimorfizm i nadpisywanie metod | `scatter` w materiałach (z wywołaniem `Lambertian::scatter` w `Plastic`), `hit` w |
-|                                  | `Sphere`, `write` w ujściach logów i `PpmWriter`                                  |
-| Kompozycja                       | `Scene` posiada `Camera` i kule; `Logger` posiada ujścia; `Renderer` posiada      |
-|                                  | `WorkerPool`; `Colour` zawiera `Vec3`                                             |
-| Agregacja                        | `Sphere` współdzieli `std::shared_ptr<const Material>`; `Renderer` odwołuje się   |
-|                                  | do `Scene` i `Logger`                                                             |
-| Funkcje anonimowe                | Tabela dyrektyw w `SceneParser`, zadania `WorkerPool`, algorytmy `std::ranges`,   |
-|                                  | generatory rapidchecka, własności testowe                                         |
-| Wyjątki                          | Hierarchia `rt::Error`, przenoszenie wyjątków między wątkami, kody wyjścia w      |
-|                                  | `main`                                                                            |
-| Przeciążanie operatorów          | Arytmetyka `Vector`/`Colour`, `==`, `<=>` (`LogLevel`), `operator[]`              |
-|                                  | (wielowymiarowy w `Image`), `operator<<`, `std::formatter`                        |
-| Elementy statyczne               | `Vector::zero()`, `Colour::black()`, `Interval::universe()`,                      |
-|                                  | `Sampler::for_pixel`, `SpecularCoat::schlick`, `CommandLine::parse`,              |
-|                                  | `Sphere::instance_count()`                                                        |
-| Typy generyczne i szablony       | `Vector<T, N>`, `Interval<T>`, `Registry<T>` z konceptem, `Sampler::uniform<T>`,  |
-|                                  | wariadyczne metody `Logger`, `rc::Arbitrary` w testach                            |
+<table>
+  <thead>
+    <tr>
+      <th>Wymaganie</th>
+      <th>Gdzie w projekcie</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Hermetyzacja (ukrywanie danych)</td>
+      <td>
+        Prywatne składowe wszystkich klas z niezmiennikami (<code>Ray</code>, <code>Colour</code>, <code>Sphere</code>,
+        <code>Image</code>, <code>Camera</code>); <code>Sampler</code> ukrywa <code>pcg32</code>
+      </td>
+    </tr>
+    <tr>
+      <td>Enkapsulacja (dane + operacje)</td>
+      <td>
+        <code>Vector</code>, <code>Image</code>, <code>Camera</code>, <code>Scene</code>, <code>Logger</code> — operacje
+        na danych tylko przez metody
+      </td>
+    </tr>
+    <tr>
+      <td>Konstruktory</td>
+      <td>
+        Walidujące (<code>Vector</code>, <code>Ray</code>, <code>Sphere</code>, <code>Colour</code>,
+        <code>Camera</code>, <code>RenderSettings</code>), domyślne, kopiujące/przenoszące (<code>Vector</code>,
+        <code>Image</code>), <code>explicit</code>, <code>constexpr</code>, delegujące, usunięte z powodem
+        (<code>Scene</code>, <code>Logger</code>, <code>WorkerPool</code>)
+      </td>
+    </tr>
+    <tr>
+      <td>Dziedziczenie pojedyncze</td>
+      <td>
+        <code>Sphere : IHittable</code>, <code>Metal/Glass/Lambertian : Material</code>, <code>StderrSink/FileSink :
+        StreamSink</code>, hierarchia wyjątków
+      </td>
+    </tr>
+    <tr>
+      <td>Dziedziczenie wielokrotne</td>
+      <td>
+        <code>Material : IScatterer, INamed</code> (interfejsy); <code>Plastic : Lambertian, private SpecularCoat</code>
+        (implementacja)
+      </td>
+    </tr>
+    <tr>
+      <td>Interfejsy</td>
+      <td>
+        <code>IHittable</code>, <code>IScatterer</code>, <code>INamed</code>, <code>ILogSink</code>,
+        <code>IImageWriter</code>
+      </td>
+    </tr>
+    <tr>
+      <td>Klasy i metody abstrakcyjne</td>
+      <td>
+        <code>Material</code> (abstrakcyjna, <code>scatter</code> czysto wirtualne), <code>StreamSink</code>
+        (<code>stream()</code> czysto wirtualne)
+      </td>
+    </tr>
+    <tr>
+      <td>Polimorfizm i nadpisywanie metod</td>
+      <td>
+        <code>scatter</code> w materiałach (z wywołaniem <code>Lambertian::scatter</code> w <code>Plastic</code>),
+        <code>hit</code> w <code>Sphere</code>, <code>write</code> w ujściach logów i <code>PpmWriter</code>
+      </td>
+    </tr>
+    <tr>
+      <td>Kompozycja</td>
+      <td>
+        <code>Scene</code> posiada <code>Camera</code> i kule; <code>Logger</code> posiada ujścia; <code>Renderer</code>
+        posiada <code>WorkerPool</code>; <code>Colour</code> zawiera <code>Vec3</code>
+      </td>
+    </tr>
+    <tr>
+      <td>Agregacja</td>
+      <td>
+        <code>Sphere</code> współdzieli <code>std::shared_ptr&lt;const Material&gt;</code>; <code>Renderer</code>
+        odwołuje się do <code>Scene</code> i <code>Logger</code>
+      </td>
+    </tr>
+    <tr>
+      <td>Funkcje anonimowe</td>
+      <td>
+        Tabela dyrektyw w <code>SceneParser</code>, zadania <code>WorkerPool</code>, algorytmy <code>std::ranges</code>,
+        generatory rapidchecka, własności testowe
+      </td>
+    </tr>
+    <tr>
+      <td>Wyjątki</td>
+      <td>Hierarchia <code>rt::Error</code>, przenoszenie wyjątków między wątkami, kody wyjścia w <code>main</code></td>
+    </tr>
+    <tr>
+      <td>Przeciążanie operatorów</td>
+      <td>
+        Arytmetyka <code>Vector</code>/<code>Colour</code>, <code>==</code>, <code>&lt;=&gt;</code>
+        (<code>LogLevel</code>), <code>operator[]</code> (wielowymiarowy w <code>Image</code>),
+        <code>operator&lt;&lt;</code>, <code>std::formatter</code>
+      </td>
+    </tr>
+    <tr>
+      <td>Elementy statyczne</td>
+      <td>
+        <code>Vector::zero()</code>, <code>Colour::black()</code>, <code>Interval::universe()</code>,
+        <code>Sampler::for_pixel</code>, <code>SpecularCoat::schlick</code>, <code>CommandLine::parse</code>,
+        <code>Sphere::instance_count()</code>
+      </td>
+    </tr>
+    <tr>
+      <td>Typy generyczne i szablony</td>
+      <td>
+        <code>Vector&lt;T, N&gt;</code>, <code>Interval&lt;T&gt;</code>, <code>Registry&lt;T&gt;</code> z konceptem,
+        <code>Sampler::uniform&lt;T&gt;</code>, wariadyczne metody <code>Logger</code>, <code>rc::Arbitrary</code> w
+        testach
+      </td>
+    </tr>
+  </tbody>
+</table>
 
 ## 13. Podział prac
 
