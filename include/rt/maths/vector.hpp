@@ -254,14 +254,16 @@ template <typename... Args>
 Vector(Args...) -> Vector<Args...[0], sizeof...(Args)>;
 
 using Vec3 = Vector<double, 3>;
-using Point3 = Vec3;
 
 } // namespace rt
 
-/// Formats as `(x, y, z)`; the format specification applies to every component: `std::format("{:.2f}", v)`.
-template <std::floating_point T, std::size_t N, typename CharT>
-struct std::formatter<rt::Vector<T, N>, CharT> {
-	constexpr formatter() {
+namespace rt::detail {
+
+/// Formats a range of `T` as `(x, y, z)`; the format specification applies to every component:
+/// `std::format("{:.2f}", v)`. Shared by the formatters of `Vector` and `Point`.
+template <std::floating_point T, typename CharT>
+struct ComponentsFormatter {
+	constexpr ComponentsFormatter() {
 		static constexpr std::array<CharT, 1> open{CharT{'('}};
 		static constexpr std::array<CharT, 1> close{CharT{')'}};
 		components_.set_brackets({open.data(), open.size()}, {close.data(), close.size()});
@@ -272,14 +274,20 @@ struct std::formatter<rt::Vector<T, N>, CharT> {
 		return components_.underlying().parse(context);
 	}
 
-	template <typename FormatContext>
-	auto format(const rt::Vector<T, N>& vector, FormatContext& context) const {
-		return components_.format(vector, context);
+	template <std::ranges::input_range Components, typename FormatContext>
+	auto format(const Components& components, FormatContext& context) const {
+		return components_.format(components, context);
 	}
 
 private:
 	std::range_formatter<T, CharT> components_;
 };
+
+} // namespace rt::detail
+
+/// Formats as `(x, y, z)`; the format specification applies to every component: `std::format("{:.2f}", v)`.
+template <std::floating_point T, std::size_t N, typename CharT>
+struct std::formatter<rt::Vector<T, N>, CharT> : rt::detail::ComponentsFormatter<T, CharT> {};
 
 #endif // RT_MATHS_VECTOR_HPP
 

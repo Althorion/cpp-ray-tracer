@@ -4,6 +4,7 @@
 #include "rt/geometry/sphere.hpp"
 #include "rt/materials/material.hpp"
 #include "rt/maths/interval.hpp"
+#include "rt/maths/point.hpp"
 #include "rt/maths/ray.hpp"
 #include "rt/maths/vector.hpp"
 
@@ -32,7 +33,7 @@ constexpr Interval<double> ahead{0.0, infinity};
 
 /// Tolerance for positions in a scene with `sphere` and `ray`, whose rounding errors grow with the coordinates.
 [[nodiscard]] double scene_tolerance(const Sphere& sphere, const Ray& ray) {
-	return tolerance(ray.origin().length() + sphere.centre().length() + sphere.radius());
+	return tolerance(distance_from_origin(ray.origin()) + distance_from_origin(sphere.centre()) + sphere.radius());
 }
 
 [[nodiscard]] double distance_from_centre(const Sphere& sphere, const Point3& point) {
@@ -41,7 +42,7 @@ constexpr Interval<double> ahead{0.0, infinity};
 
 /// Ray from an arbitrary origin through an arbitrary point well inside `sphere`, so it crosses the surface twice.
 [[nodiscard]] Ray aimed_ray(const Sphere& sphere) {
-	const Point3 origin = *finite_vector<double, 3>();
+	const Point3 origin = *finite_point<double, 3>();
 	const Point3 target = sphere.centre() + (*unit_vector<double, 3>() * (sphere.radius() * 0.99 * *unit_channel()));
 	RC_PRE((target - origin).length_squared() > 0.0);
 	return Ray{origin, target - origin};
@@ -49,7 +50,7 @@ constexpr Interval<double> ahead{0.0, infinity};
 
 void check_properties(Suite& suite) {
 	suite.check("a ray from outside aimed at the centre hits at |c - o| - r", [](const Sphere& sphere) {
-		const Point3 origin = *finite_vector<double, 3>();
+		const Point3 origin = *finite_point<double, 3>();
 		const double distance = distance_from_centre(sphere, origin);
 		RC_PRE(distance > sphere.radius());
 		const Ray ray{origin, sphere.centre() - origin};
@@ -91,7 +92,7 @@ void check_properties(Suite& suite) {
 	});
 
 	suite.check("a ray from outside heading away misses", [](const Sphere& sphere) {
-		const Point3 origin = *finite_vector<double, 3>();
+		const Point3 origin = *finite_point<double, 3>();
 		RC_PRE(distance_from_centre(sphere, origin) > sphere.radius());
 		const Vec3 direction = *nonzero_vector<double, 3>();
 		const double approach = dot(direction, sphere.centre() - origin);

@@ -6,6 +6,7 @@
 #include "rt/materials/metal.hpp"
 #include "rt/materials/plastic.hpp"
 #include "rt/maths/interval.hpp"
+#include "rt/maths/point.hpp"
 #include "rt/maths/ray.hpp"
 #include "rt/maths/vector.hpp"
 #include "rt/scene/scene.hpp"
@@ -83,7 +84,7 @@ void check_properties(Suite& suite) {
 		const Point3 origin = sphere.centre + (Vec3::unit_x() * (2.0 * sphere.radius));
 		const auto record = scene.hit(Ray{origin, -Vec3::unit_x()}, Interval{0.0, infinity});
 		RC_ASSERT(record.has_value());
-		RC_ASSERT(approx_equal(record->t, sphere.radius, tolerance(sphere.centre.length() + sphere.radius)));
+		RC_ASSERT(approx_equal(record->t, sphere.radius, tolerance(distance_from_origin(sphere.centre) + sphere.radius)));
 		RC_ASSERT(record->material->name() == sphere.material);
 	});
 

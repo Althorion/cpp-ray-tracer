@@ -1,6 +1,7 @@
 #ifndef RT_GEOMETRY_HIT_RECORD_HPP
 #define RT_GEOMETRY_HIT_RECORD_HPP
 
+#include "rt/maths/point.hpp"
 #include "rt/maths/ray.hpp"
 #include "rt/maths/vector.hpp"
 

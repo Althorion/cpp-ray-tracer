@@ -342,7 +342,7 @@ a wyjątek jest ponownie rzucany w wątku wywołującym. Postęp (liczba ukończ
 CMakeLists.txt  CMakePresets.json  .clang-tidy  .clang-format
 cmake/                 # Dependencies.cmake (FetchContent), Warnings.cmake
 include/rt/
-  maths/               vector.hpp interval.hpp ray.hpp
+  maths/               vector.hpp point.hpp interval.hpp ray.hpp
   colour.hpp
   random/              sampler.hpp
   geometry/            hittable.hpp hit_record.hpp sphere.hpp
@@ -373,12 +373,20 @@ docs/
   naruszenie rzuca `MathsError`, a operacje złożone (`+=` itd.) nie zmieniają wtedy wektora. `length` i `normalised`
   są odporne na przepełnienie i niedomiar (poprawne także dla składowych rzędu `1e300` i `1e-300`); `dot`
   i `length_squared` zwracają skalar, więc mogą dać nieskończoność.
-  Aliasy: `using Vec3 = Vector<double, 3>; using Point3 = Vec3;`.
+  Alias: `using Vec3 = Vector<double, 3>;`.
+- `template <std::floating_point T, std::size_t N> class Point` — położenie w przestrzeni, w odróżnieniu od
+  przesunięcia (`Vector`); razem tworzą przestrzeń afiniczną. Kompozycja `Vector<T, N>` (położenie względem
+  początku układu). Tylko operacje sensowne dla położeń: `punkt − punkt → wektor`, `punkt ± wektor → punkt`, `+= −=`
+  z wektorem, `==`, `operator[]` (tylko odczyt) i `set(i, x)`; statyczna fabryka `origin()`; `operator<<`
+  i `std::formatter` (ten sam format co `Vector`). Punktów nie da się dodawać, skalować, normalizować ani mnożyć
+  skalarnie; punkt i wektor nie konwertują się na siebie. Położenie jako wektor trzeba wyrazić jawnie: `p −
+  Point3::origin()`. Niezmiennik skończoności dziedziczy po `Vector`, bo każda operacja przechodzi przez jego
+  operacje. Alias: `using Point3 = Point<double, 3>;`.
 - `template <std::floating_point T> class Interval` — `min`, `max`, `contains`, `surrounds`, `clamp`; statyczne stałe
   `empty()` i `universe()`.
 - `class Ray` — `origin`, `direction` (niezmiennik: znormalizowany, ustalany w konstruktorze), `at(t)`. Początek
-  i kierunek są skończone na mocy niezmiennika `Vector`; `at(t)` rzuca `MathsError` dla nieskończonego lub NaN `t`
-  (oraz gdy wynik się przepełnia).
+  i kierunek są skończone na mocy niezmienników `Point` i `Vector`; `at(t)` rzuca `MathsError` dla nieskończonego
+  lub NaN `t` (oraz gdy wynik się przepełnia).
 - `class Colour` — składowe `r, g, b ≥ 0` (niezmiennik sprawdzany w konstruktorze); kompozycja `Vec3`; operatory
   `+ * /` (kolor–kolor po składowych i kolor–skalar), `==`; `gamma_corrected()`, `quantised()` →
   `std::array<std::uint8_t, 3>`; stałe statyczne `black()`, `white()`.
@@ -582,8 +590,8 @@ Każdy wyjątek ma konstruktor przyjmujący opis i (gdzie ma to sens) dane konte
   i zwraca z `main` kod różny od 0, jeśli którakolwiek własność nie przeszła. Testy przykładowe (konkretne
   wejście → konkretne wyjście) zapisujemy jako `rc::check` bez parametrów lub zwykłe asercje w harnessie.
 - `tests/generators.hpp` — specjalizacje `rc::Arbitrary` i własne generatory: wektory skończone, wektory
-  niezerowe, wektory jednostkowe, kolory w `[0, 1]`, przedziały, promienie, kule, materiały, ustawienia kamery,
-  poprawne `SceneDescription`, identyfikatory.
+  niezerowe, wektory jednostkowe, punkty skończone, kolory w `[0, 1]`, przedziały, promienie, kule, materiały,
+  ustawienia kamery, poprawne `SceneDescription`, identyfikatory.
 - Liczbę przypadków i ziarno rapidchecka kontroluje zmienna `RC_PARAMS`; CTest domyślnie używa
   `max_success=200`.
 - Porównania zmiennoprzecinkowe przez funkcję `approx_equal(a, b, eps)` z tolerancją względną i bezwzględną.
@@ -591,7 +599,7 @@ Każdy wyjątek ma konstruktor przyjmujący opis i (gdzie ma to sens) dane konte
 
 ### 8.2. Wymagane własności
 
-**Vector / Interval / Ray / Colour**
+**Vector / Point / Interval / Ray / Colour**
 
 - Dodawanie jest przemienne i (z dokładnością `eps`) łączne; `v − v == 0`; `(a + b) · s ≈ a·s + b·s`.
 - `dot` symetryczny; `cross(a, b)` prostopadły do `a` i `b`; `cross(a, b) ≈ −cross(b, a)`.
@@ -599,6 +607,9 @@ Każdy wyjątek ma konstruktor przyjmujący opis i (gdzie ma to sens) dane konte
 - Wektor z nieskończoną lub NaN składową (z konstruktora albo `set`) rzuca `MathsError`; operacja o nieskończonym
   lub NaN wyniku (przepełnienie, dzielenie przez zero, skalar nieskończony) rzuca `MathsError` i nie zmienia
   argumentu.
+- `p − p == 0`; `p + 0 == p`; `(p + v) − v ≈ p`; `p + (q − p) ≈ q`; `(p + a) − (p + b) ≈ a − b`. Punktów nie
+  da się dodać, przeskalować ani zanegować, a punkt i wektor nie konwertują się na siebie (sprawdzane
+  w `static_assert`). Nieskończona lub NaN współrzędna i przepełnienie rzucają `MathsError` jak dla `Vector`.
 - `Interval::clamp(x)` zawsze w przedziale; `contains(clamp(x))`.
 - `‖ray.at(t) − origin‖ ≈ |t|`; `Ray` z zerowym kierunkiem rzuca wyjątek; `ray.at(t)` dla nieskończonego lub NaN
   `t` rzuca `MathsError`.
@@ -854,7 +865,8 @@ Poniższe narzędzia nie są wymaganiami; warto wrócić do nich, gdy projekt b�
       <td>Kompozycja</td>
       <td>
         <code>Scene</code> posiada <code>Camera</code> i kule; <code>Logger</code> posiada ujścia; <code>Renderer</code>
-        posiada <code>WorkerPool</code>; <code>Colour</code> zawiera <code>Vec3</code>
+        posiada <code>WorkerPool</code>; <code>Colour</code> zawiera <code>Vec3</code>, a <code>Point</code> —
+        <code>Vector</code>
       </td>
     </tr>
     <tr>
@@ -878,7 +890,7 @@ Poniższe narzędzia nie są wymaganiami; warto wrócić do nich, gdy projekt b�
     <tr>
       <td>Przeciążanie operatorów</td>
       <td>
-        Arytmetyka <code>Vector</code>/<code>Colour</code>, <code>==</code>, <code>&lt;=&gt;</code>
+        Arytmetyka <code>Vector</code>/<code>Point</code>/<code>Colour</code>, <code>==</code>, <code>&lt;=&gt;</code>
         (<code>LogLevel</code>), <code>operator[]</code> (wielowymiarowy w <code>Image</code>),
         <code>operator&lt;&lt;</code>, <code>std::formatter</code>
       </td>
@@ -894,9 +906,9 @@ Poniższe narzędzia nie są wymaganiami; warto wrócić do nich, gdy projekt b�
     <tr>
       <td>Typy generyczne i szablony</td>
       <td>
-        <code>Vector&lt;T, N&gt;</code>, <code>Interval&lt;T&gt;</code>, <code>Registry&lt;T&gt;</code> z konceptem,
-        <code>Sampler::uniform&lt;T&gt;</code>, wariadyczne metody <code>Logger</code>, <code>rc::Arbitrary</code> w
-        testach
+        <code>Vector&lt;T, N&gt;</code>, <code>Point&lt;T, N&gt;</code>, <code>Interval&lt;T&gt;</code>,
+        <code>Registry&lt;T&gt;</code> z konceptem, <code>Sampler::uniform&lt;T&gt;</code>, wariadyczne metody
+        <code>Logger</code>, <code>rc::Arbitrary</code> w testach
       </td>
     </tr>
   </tbody>

@@ -1,4 +1,5 @@
 #include "rt/errors.hpp"
+#include "rt/maths/point.hpp"
 #include "rt/maths/ray.hpp"
 #include "rt/maths/vector.hpp"
 
@@ -23,7 +24,7 @@ void check_properties(Suite& suite) {
 	suite.check("the point at t lies |t| away from the origin", [](const Ray& ray) {
 		const double t = *finite_scalar<double>();
 		const double distance = (ray.at(t) - ray.origin()).length();
-		RC_ASSERT(approx_equal(distance, std::abs(t), tolerance(ray.origin().length() + std::abs(t))));
+		RC_ASSERT(approx_equal(distance, std::abs(t), tolerance(distance_from_origin(ray.origin()) + std::abs(t))));
 	});
 
 	suite.check("the direction has unit length",
@@ -47,7 +48,7 @@ void check_properties(Suite& suite) {
 	suite.check("points along the ray differ by a multiple of the direction", [](const Ray& ray) {
 		const double t = *finite_scalar<double>();
 		const double s = *finite_scalar<double>();
-		const double scale = ray.origin().length() + std::abs(t) + std::abs(s);
+		const double scale = distance_from_origin(ray.origin()) + std::abs(t) + std::abs(s);
 		RC_ASSERT(approx_equal(ray.at(t) - ray.at(s), ray.direction() * (t - s), tolerance(scale)));
 	});
 

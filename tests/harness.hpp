@@ -1,6 +1,7 @@
 #ifndef RT_TESTS_HARNESS_HPP
 #define RT_TESTS_HARNESS_HPP
 
+#include "rt/maths/point.hpp"
 #include "rt/maths/vector.hpp"
 
 #include <rapidcheck.h>
@@ -53,6 +54,18 @@ template <std::floating_point T>
 /// Component-wise `approx_equal`.
 template <std::floating_point T, std::size_t N>
 [[nodiscard]] bool approx_equal(const Vector<T, N>& a, const Vector<T, N>& b, T eps = default_eps<T>) {
+	return std::ranges::equal(a, b, [eps](T x, T y) { return approx_equal(x, y, eps); });
+}
+
+/// Distance of `point` from the origin: the scale of the rounding errors in computations with its coordinates.
+template <std::floating_point T, std::size_t N>
+[[nodiscard]] T distance_from_origin(const Point<T, N>& point) {
+	return (point - Point<T, N>::origin()).length();
+}
+
+/// Coordinate-wise `approx_equal`.
+template <std::floating_point T, std::size_t N>
+[[nodiscard]] bool approx_equal(const Point<T, N>& a, const Point<T, N>& b, T eps = default_eps<T>) {
 	return std::ranges::equal(a, b, [eps](T x, T y) { return approx_equal(x, y, eps); });
 }
 

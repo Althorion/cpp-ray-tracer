@@ -5,6 +5,7 @@
 #include "rt/materials/lambertian.hpp"
 #include "rt/materials/metal.hpp"
 #include "rt/materials/plastic.hpp"
+#include "rt/maths/point.hpp"
 #include "rt/maths/vector.hpp"
 #include "rt/scene/camera.hpp"
 #include "rt/validation.hpp"

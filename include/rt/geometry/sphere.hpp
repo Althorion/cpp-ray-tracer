@@ -5,6 +5,7 @@
 #include "rt/geometry/hit_record.hpp"
 #include "rt/geometry/hittable.hpp"
 #include "rt/maths/interval.hpp"
+#include "rt/maths/point.hpp"
 #include "rt/maths/ray.hpp"
 #include "rt/maths/vector.hpp"
 #include "rt/validation.hpp"

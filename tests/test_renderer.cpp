@@ -1,4 +1,5 @@
 #include "rt/colour.hpp"
+#include "rt/maths/point.hpp"
 #include "rt/maths/vector.hpp"
 #include "rt/random/sampler.hpp"
 #include "rt/render/image.hpp"

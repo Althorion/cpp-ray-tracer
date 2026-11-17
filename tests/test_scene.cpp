@@ -5,6 +5,7 @@
 #include "rt/materials/lambertian.hpp"
 #include "rt/materials/metal.hpp"
 #include "rt/maths/interval.hpp"
+#include "rt/maths/point.hpp"
 #include "rt/maths/ray.hpp"
 #include "rt/maths/vector.hpp"
 #include "rt/scene/camera.hpp"
@@ -84,7 +85,7 @@ void check_hits(Suite& suite) {
 	            [](const std::vector<Sphere>& spheres) {
 								RC_PRE(!spheres.empty());
 								const Sphere& target = spheres[*index_below(spheres.size())];
-								const Point3 origin = *finite_vector<double, 3>();
+								const Point3 origin = *finite_point<double, 3>();
 								RC_PRE(origin != target.centre());
 								RC_ASSERT(agrees_with_spheres(scene_with(spheres), spheres, Ray{origin, target.centre() - origin}));
 							});

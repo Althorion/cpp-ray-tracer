@@ -3,6 +3,7 @@
 
 #include "rt/colour.hpp"
 #include "rt/errors.hpp"
+#include "rt/maths/point.hpp"
 #include "rt/maths/vector.hpp"
 
 #include <cmath>
@@ -107,8 +108,9 @@ inline constexpr double min_up_sine = 1e-9;
 		return "the camera's up vector must not be zero";
 	}
 	// Halved first, so that the difference cannot overflow; only for the tiniest (subnormal) differences can the
-	// halves round to the same value, and then the plain difference is exact.
-	Vec3 view = (to * 0.5) - (from * 0.5);
+	// halves round to the same value, and then the plain difference is exact. Points cannot be scaled, so the
+	// halving works on their positions relative to the origin.
+	Vec3 view = ((to - Point3::origin()) * 0.5) - ((from - Point3::origin()) * 0.5);
 	if (view == Vec3::zero()) {
 		view = to - from;
 	}

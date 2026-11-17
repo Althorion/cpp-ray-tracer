@@ -10,6 +10,7 @@
 #include "rt/materials/metal.hpp"
 #include "rt/materials/plastic.hpp"
 #include "rt/maths/interval.hpp"
+#include "rt/maths/point.hpp"
 #include "rt/maths/ray.hpp"
 #include "rt/maths/vector.hpp"
 #include "rt/random/sampler.hpp"
@@ -54,6 +55,14 @@ template <std::floating_point T, std::size_t N>
 [[nodiscard]] rc::Gen<Vector<T, N>> finite_vector() {
 	return []<std::size_t... Indices>(std::index_sequence<Indices...>) {
 		return rc::gen::construct<Vector<T, N>>(((void)Indices, finite_scalar<T>())...);
+	}(std::make_index_sequence<N>{});
+}
+
+/// Point with finite coordinates in `(-coordinate_bound, coordinate_bound)`.
+template <std::floating_point T, std::size_t N>
+[[nodiscard]] rc::Gen<Point<T, N>> finite_point() {
+	return []<std::size_t... Indices>(std::index_sequence<Indices...>) {
+		return rc::gen::construct<Point<T, N>>(((void)Indices, finite_scalar<T>())...);
 	}(std::make_index_sequence<N>{});
 }
 
@@ -118,7 +127,7 @@ template <std::floating_point T>
 
 /// Ray with a finite origin and a direction that is not (numerically) zero.
 [[nodiscard]] inline rc::Gen<Ray> any_ray() {
-	return rc::gen::construct<Ray>(finite_vector<double, 3>(), nonzero_vector<double, 3>());
+	return rc::gen::construct<Ray>(finite_point<double, 3>(), nonzero_vector<double, 3>());
 }
 
 /// Number in `(0, coordinate_bound)`.
@@ -224,7 +233,7 @@ inline constexpr std::size_t max_identifier_length = 20;
 
 /// Sphere with a finite centre, a `sphere_radius` and the `placeholder_material`.
 [[nodiscard]] inline rc::Gen<Sphere> any_sphere() {
-	return rc::gen::construct<Sphere>(finite_vector<double, 3>(), sphere_radius(), rc::gen::just(placeholder_material()));
+	return rc::gen::construct<Sphere>(finite_point<double, 3>(), sphere_radius(), rc::gen::just(placeholder_material()));
 }
 
 /// A ray meeting a surface: the record has a unit normal facing against the ray, and either `front_face`.
@@ -289,7 +298,7 @@ template <std::floating_point T>
 						.focus = focus_distance,
 				};
 			},
-			finite_vector<double, 3>(), unit_vector<double, 3>(), scaled(0.01, 100.0), unit_vector<double, 3>(),
+			finite_point<double, 3>(), unit_vector<double, 3>(), scaled(0.01, 100.0), unit_vector<double, 3>(),
 			scaled(1.0, 179.0), scaled(0.0, 2.0), focus);
 	return rc::gen::suchThat(settings, [](const CameraSettings& candidate) {
 		return candidate.from != candidate.to &&
@@ -434,7 +443,7 @@ template <typename T>
 			const std::size_t count = *rc::gen::inRange<std::size_t>(0, 9);
 			for (std::size_t i = 0; i < count; ++i) {
 				description.spheres.push_back({
-						.centre = *finite_vector<double, 3>(),
+						.centre = *finite_point<double, 3>(),
 						.radius = *sphere_radius(),
 						.material = description.materials[*index_below(description.materials.size())].name,
 				});
@@ -535,6 +544,11 @@ struct Arbitrary<rt::Interval<T>> {
 template <std::floating_point T, std::size_t N>
 struct Arbitrary<rt::Vector<T, N>> {
 	static Gen<rt::Vector<T, N>> arbitrary() { return rt::test::finite_vector<T, N>(); }
+};
+
+template <std::floating_point T, std::size_t N>
+struct Arbitrary<rt::Point<T, N>> {
+	static Gen<rt::Point<T, N>> arbitrary() { return rt::test::finite_point<T, N>(); }
 };
 
 } // namespace rc

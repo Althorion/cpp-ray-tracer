@@ -7,6 +7,7 @@
 #include "rt/materials/metal.hpp"
 #include "rt/materials/plastic.hpp"
 #include "rt/materials/specular_coat.hpp"
+#include "rt/maths/point.hpp"
 #include "rt/maths/ray.hpp"
 #include "rt/maths/vector.hpp"
 #include "rt/random/sampler.hpp"
@@ -70,7 +71,7 @@ static_assert(!std::is_polymorphic_v<SpecularCoat>, "a mixin, not an interface")
 	const double fraction = *unit_channel();
 	RC_PRE(fraction > 0.0);
 	const double angle = critical + ((std::numbers::pi / 2 - critical) * fraction);
-	const Ray ray{*finite_vector<double, 3>(), (outward * std::cos(angle)) + (tangent.normalised() * std::sin(angle))};
+	const Ray ray{*finite_point<double, 3>(), (outward * std::cos(angle)) + (tangent.normalised() * std::sin(angle))};
 	return Incidence{.ray = ray, .record = HitRecord::from_outward_normal(ray, 1.0, outward, nullptr)};
 }
 

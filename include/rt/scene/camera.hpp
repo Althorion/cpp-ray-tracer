@@ -2,6 +2,7 @@
 #define RT_SCENE_CAMERA_HPP
 
 #include "rt/errors.hpp"
+#include "rt/maths/point.hpp"
 #include "rt/maths/ray.hpp"
 #include "rt/maths/vector.hpp"
 #include "rt/random/sampler.hpp"

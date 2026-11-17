@@ -1,4 +1,5 @@
 #include "rt/errors.hpp"
+#include "rt/maths/point.hpp"
 #include "rt/maths/ray.hpp"
 #include "rt/maths/vector.hpp"
 #include "rt/random/sampler.hpp"
@@ -61,7 +62,7 @@ struct Frame {
 /// Rounding allowance for `pixel_position`, in pixels: the coordinates are rounded relative to the size of the
 /// scene, which a small pixel magnifies.
 [[nodiscard]] double pixel_slack(const CameraSettings& settings, const Frame& frame, Resolution resolution) {
-	const double scale = settings.from.length() + frame.focus + frame.half_width + frame.half_height;
+	const double scale = distance_from_origin(settings.from) + frame.focus + frame.half_width + frame.half_height;
 	const double pixel = std::min(2.0 * frame.half_width / static_cast<double>(resolution.width),
 	                              2.0 * frame.half_height / static_cast<double>(resolution.height));
 	return 1e-12 * std::max(1.0, scale) / pixel;
@@ -95,7 +96,7 @@ void check_rays(Suite& suite) {
 								const Ray ray = camera.ray_for(*index_below(resolution.width), *index_below(resolution.height),
 								                               resolution, sampler);
 								const Vec3 offset = ray.origin() - settings.from;
-								const double allowance = tolerance(settings.from.length());
+								const double allowance = tolerance(distance_from_origin(settings.from));
 								RC_ASSERT(offset.length() <= (settings.aperture / 2.0) + allowance);
 								RC_ASSERT(std::abs(dot(offset, frame_of(settings, resolution).w)) <= allowance);
 							});

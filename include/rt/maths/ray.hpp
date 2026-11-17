@@ -1,6 +1,7 @@
 #ifndef RT_MATHS_RAY_HPP
 #define RT_MATHS_RAY_HPP
 
+#include "rt/maths/point.hpp"
 #include "rt/maths/vector.hpp"
 
 #include <ostream>
@@ -9,7 +10,7 @@ namespace rt {
 
 /// Half-line `origin + t · direction`, with the direction always of unit length.
 ///
-/// Origin and direction are finite by the invariant of `Vector`.
+/// Origin and direction are finite by the invariants of `Point` and `Vector`.
 class Ray {
 public:
 	/// Ray from `origin` along `direction`; the direction need not be normalised.
