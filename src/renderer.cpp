@@ -1,7 +1,6 @@
 #include "rt/render/renderer.hpp"
 
 #include "rt/colour.hpp"
-#include "rt/errors.hpp"
 #include "rt/maths/ray.hpp"
 #include "rt/random/sampler.hpp"
 #include "rt/render/image.hpp"
@@ -30,10 +29,7 @@ Colour Renderer::trace(Ray ray, Sampler& sampler) const {
 		if (!record) {
 			return throughput * scene_->sky_colour(ray.direction());
 		}
-		if (record->material == nullptr) {
-			throw Error{"a surface was hit that has no material"};
-		}
-		const auto scattered = record->material->scatter(ray, *record, sampler);
+		const auto scattered = record->material.get().scatter(ray, *record, sampler);
 		if (!scattered) {
 			return Colour::black();
 		}

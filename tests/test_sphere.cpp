@@ -148,7 +148,7 @@ void check_examples(Suite& suite) {
 		RC_ASSERT(record->point == Point3(0, 0, -4));
 		RC_ASSERT(record->normal == Vec3::unit_z());
 		RC_ASSERT(record->front_face);
-		RC_ASSERT(record->material == sphere.material().get());
+		RC_ASSERT(&record->material.get() == sphere.material().get());
 	});
 
 	suite.check("a ray from the centre hits from the inside", [] {
@@ -198,7 +198,8 @@ void check_examples(Suite& suite) {
 		RC_ASSERT(first.material() == material);
 		RC_ASSERT(second.material() == material);
 		RC_ASSERT(material.use_count() == 3);
-		RC_ASSERT(first.hit(Ray{Point3{0, 0, 5}, -Vec3::unit_z()}, Interval{0.001, infinity})->material == material.get());
+		RC_ASSERT(&first.hit(Ray{Point3{0, 0, 5}, -Vec3::unit_z()}, Interval{0.001, infinity})->material.get() ==
+		          material.get());
 	});
 
 	suite.check("a sphere without a material throws Error",

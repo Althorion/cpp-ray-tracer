@@ -72,7 +72,7 @@ static_assert(!std::is_polymorphic_v<SpecularCoat>, "a mixin, not an interface")
 	RC_PRE(fraction > 0.0);
 	const double angle = critical + ((std::numbers::pi / 2 - critical) * fraction);
 	const Ray ray{*finite_point<double, 3>(), (outward * std::cos(angle)) + (tangent.normalised() * std::sin(angle))};
-	return Incidence{.ray = ray, .record = HitRecord::from_outward_normal(ray, 1.0, outward, nullptr)};
+	return Incidence{.ray = ray, .record = HitRecord::from_outward_normal(ray, 1.0, outward, placeholder_surface())};
 }
 
 /// Properties every material must have (README.md § 8.2), checked through the `Material` interface.
@@ -293,7 +293,7 @@ void check_examples(Suite& suite) {
 	suite.check("a polished metal mirrors light", [] {
 		Sampler sampler{0};
 		const Ray ray{Point3{-1, 1, 0}, Vec3{1, -1, 0}};
-		const auto record = HitRecord::from_outward_normal(ray, std::numbers::sqrt2, Vec3::unit_y(), nullptr);
+		const auto record = HitRecord::from_outward_normal(ray, std::numbers::sqrt2, Vec3::unit_y(), placeholder_surface());
 		const auto scattered = Metal{"silver", Colour{0.9, 0.9, 0.9}, 0.0}.scatter(ray, record, sampler);
 		RC_ASSERT(scattered.has_value());
 		RC_ASSERT(approx_equal(scattered->ray.direction(), Vec3{1, 1, 0}.normalised()));
@@ -305,7 +305,7 @@ void check_examples(Suite& suite) {
 		Sampler sampler{0};
 		// Inside, heading out through the top at 60° to the normal; sin 60° · 1.5 ≈ 1.3 > 1.
 		const Ray ray{Point3{}, Vec3{std::numbers::sqrt3, 1, 0}};
-		const auto record = HitRecord::from_outward_normal(ray, 1.0, Vec3::unit_y(), nullptr);
+		const auto record = HitRecord::from_outward_normal(ray, 1.0, Vec3::unit_y(), placeholder_surface());
 		RC_ASSERT(!record.front_face);
 		const auto scattered = Glass{"glass", 1.5}.scatter(ray, record, sampler);
 		RC_ASSERT(approx_equal(scattered->ray.direction(), Vec3{std::numbers::sqrt3, -1, 0}.normalised()));

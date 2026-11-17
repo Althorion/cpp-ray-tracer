@@ -71,7 +71,7 @@ public:
 
 		for (const double t : {first, second}) {
 			if (range.contains(t)) {
-				return HitRecord::from_outward_normal(ray, t, ray.at(t) - centre_, material_.get());
+				return HitRecord::from_outward_normal(ray, t, ray.at(t) - centre_, *material_);
 			}
 		}
 		return std::nullopt;

@@ -407,9 +407,11 @@ docs/
 - Interfejs `IHittable` — `virtual std::optional<HitRecord> hit(const Ray&, Interval<double>) const = 0;`
   wirtualny destruktor.
 - `struct HitRecord` — `point`, `normal` (zawsze przeciwny do promienia), `t`, `front_face`,
-  `const Material*`. Tworzony przez statyczną fabrykę `from_outward_normal(ray, t, outward_normal, material)`,
-  która normalizuje normalną i odwraca ją, gdy promień nadchodzi od wewnątrz (promień styczny liczy się jako
-  wewnętrzny); `Material` jest tu jedynie zadeklarowany zawczasu.
+  `std::reference_wrapper<const Material>` (nie przejmuje własności jak wskaźnik, ale nigdy nie jest puste — każde
+  trafienie ma materiał, więc `Renderer` nie musi tego sprawdzać; nie `std::experimental::observer_ptr`, bo nie wszedł
+  do standardu i dopuszcza wartość pustą). Tworzony przez statyczną fabrykę `from_outward_normal(ray, t, outward_normal,
+  material)`, która normalizuje normalną i odwraca ją, gdy promień nadchodzi od wewnątrz (promień styczny liczy się jako
+  wewnętrzny) i przyjmuje materiał przez `const Material&`; `Material` jest tu jedynie zadeklarowany zawczasu.
 - `class Sphere final : public IHittable` — `centre`, `radius` (> 0, sprawdzane w konstruktorze), materiał
   przechowywany jako `std::shared_ptr<const Material>` (**agregacja** — materiał żyje niezależnie od kuli i może być
   współdzielony; pusty wskaźnik → `Error`); statyczny licznik utworzonych kul (`Sphere::instance_count()`),

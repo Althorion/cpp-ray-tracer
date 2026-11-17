@@ -5,6 +5,8 @@
 #include "rt/maths/ray.hpp"
 #include "rt/maths/vector.hpp"
 
+#include <functional>
+
 namespace rt {
 
 class Material;
@@ -23,7 +25,13 @@ struct HitRecord {
 	/// Whether the ray arrived from the outside of the surface, i.e. against its outward normal.
 	bool front_face = false;
 	/// Material of the surface, not owned; it outlives the record (the scene keeps materials alive).
-	const Material* material = nullptr;
+	///
+	/// A reference, since every surface has a material and a reference cannot be null; wrapped, since a plain
+	/// reference member would make the record unassignable, and `Scene::hit` reassigns the nearest record. Not
+	/// `std::experimental::observer_ptr` (Library Fundamentals TS v2): it never made it into the standard, and it
+	/// is nullable like a raw pointer, so it would document that the record does not own the material without
+	/// ruling out a missing one.
+	std::reference_wrapper<const Material> material;
 
 	/// The record of `ray` meeting a surface at `t`, whose outward normal there is `outward_normal`.
 	///
@@ -32,7 +40,7 @@ struct HitRecord {
 	///
 	/// @throws MathsError if `t` is not finite, `ray.at(t)` overflows, or `outward_normal` is zero.
 	[[nodiscard]] static constexpr HitRecord from_outward_normal(const Ray& ray, double t, const Vec3& outward_normal,
-	                                                             const Material* material) {
+	                                                             const Material& material) {
 		const Vec3 unit_normal = outward_normal.normalised();
 		const bool front_face = dot(ray.direction(), unit_normal) < 0.0;
 		return HitRecord{

@@ -25,44 +25,45 @@ static_assert(std::is_trivially_copyable_v<HitRecord>);
 
 void check_hit_record(Suite& suite) {
 	suite.check("the normal faces against the ray", [](const Ray& ray) {
-		const auto record =
-				HitRecord::from_outward_normal(ray, *finite_scalar<double>(), *nonzero_vector<double, 3>(), nullptr);
+		const auto record = HitRecord::from_outward_normal(ray, *finite_scalar<double>(), *nonzero_vector<double, 3>(),
+		                                                   placeholder_surface());
 		RC_ASSERT(dot(record.normal, ray.direction()) <= 0.0);
 	});
 
 	suite.check("the normal is the normalised outward normal, flipped for hits from the inside", [](const Ray& ray) {
 		const Vec3 outward = *nonzero_vector<double, 3>();
-		const auto record = HitRecord::from_outward_normal(ray, *finite_scalar<double>(), outward, nullptr);
+		const auto record = HitRecord::from_outward_normal(ray, *finite_scalar<double>(), outward, placeholder_surface());
 		RC_ASSERT(approx_equal(record.normal.length(), 1.0));
 		RC_ASSERT(record.normal == (record.front_face ? outward.normalised() : -outward.normalised()));
 	});
 
 	suite.check("front_face tells whether the ray goes against the outward normal", [](const Ray& ray) {
 		const Vec3 outward = *nonzero_vector<double, 3>();
-		const auto record = HitRecord::from_outward_normal(ray, *finite_scalar<double>(), outward, nullptr);
+		const auto record = HitRecord::from_outward_normal(ray, *finite_scalar<double>(), outward, placeholder_surface());
 		RC_ASSERT(record.front_face == (dot(ray.direction(), outward.normalised()) < 0.0));
 	});
 
 	suite.check("the point and t come from the ray", [](const Ray& ray) {
 		const double t = *finite_scalar<double>();
-		const auto record = HitRecord::from_outward_normal(ray, t, *nonzero_vector<double, 3>(), nullptr);
+		const auto record = HitRecord::from_outward_normal(ray, t, *nonzero_vector<double, 3>(), placeholder_surface());
 		RC_ASSERT(record.t == t);
 		RC_ASSERT(record.point == ray.at(t));
 	});
 
 	suite.check("a zero normal or a non-finite t throws MathsError", [](const Ray& ray) {
-		RC_ASSERT_THROWS_AS(
-				static_cast<void>(HitRecord::from_outward_normal(ray, *finite_scalar<double>(), Vec3::zero(), nullptr)),
-				MathsError);
-		RC_ASSERT_THROWS_AS(static_cast<void>(HitRecord::from_outward_normal(ray, *non_finite_scalar<double>(),
-		                                                                     *nonzero_vector<double, 3>(), nullptr)),
+		RC_ASSERT_THROWS_AS(static_cast<void>(HitRecord::from_outward_normal(ray, *finite_scalar<double>(), Vec3::zero(),
+		                                                                     placeholder_surface())),
+		                    MathsError);
+		RC_ASSERT_THROWS_AS(static_cast<void>(HitRecord::from_outward_normal(
+														ray, *non_finite_scalar<double>(), *nonzero_vector<double, 3>(), placeholder_surface())),
 		                    MathsError);
 	});
 }
 
 void check_examples(Suite& suite) {
 	suite.check("a grazing ray counts as coming from the inside", [] {
-		const auto record = HitRecord::from_outward_normal(Ray{Point3{}, Vec3::unit_x()}, 1.0, Vec3::unit_z(), nullptr);
+		const auto record =
+				HitRecord::from_outward_normal(Ray{Point3{}, Vec3::unit_x()}, 1.0, Vec3::unit_z(), placeholder_surface());
 		RC_ASSERT(!record.front_face);
 		RC_ASSERT(record.normal == -Vec3::unit_z());
 	});

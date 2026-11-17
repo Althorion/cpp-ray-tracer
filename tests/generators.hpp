@@ -231,6 +231,13 @@ inline constexpr std::size_t max_identifier_length = 20;
 	return std::make_shared<const Lambertian>("placeholder", Colour{0.5, 0.5, 0.5});
 }
 
+/// Material for hit records in tests that need one but do not depend on which; it lives for the whole program,
+/// so records can refer to it freely.
+[[nodiscard]] inline const Material& placeholder_surface() {
+	static const Lambertian material{"placeholder", Colour{0.5, 0.5, 0.5}};
+	return material;
+}
+
 /// Sphere with a finite centre, a `sphere_radius` and the `placeholder_material`.
 [[nodiscard]] inline rc::Gen<Sphere> any_sphere() {
 	return rc::gen::construct<Sphere>(finite_point<double, 3>(), sphere_radius(), rc::gen::just(placeholder_material()));
@@ -248,7 +255,7 @@ struct Incidence {
 												const auto& [ray, t, outward_normal] = parts;
 												return Incidence{
 														.ray = ray,
-														.record = HitRecord::from_outward_normal(ray, t, outward_normal, nullptr),
+														.record = HitRecord::from_outward_normal(ray, t, outward_normal, placeholder_surface()),
 												};
 											});
 }

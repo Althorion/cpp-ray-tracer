@@ -181,7 +181,7 @@ void check_examples(Suite& suite) {
 		scene.add_object(std::make_unique<Sphere>(Point3{0, 0, -3}, 1, gold));
 		scene.add_object(std::make_unique<Sphere>(Point3{0, 0, 3}, 1, gold));
 		RC_ASSERT(gold.use_count() == 3);
-		RC_ASSERT(scene.hit(Ray{Point3{0, 0, 0}, -Vec3::unit_z()}, ahead)->material == gold.get());
+		RC_ASSERT(&scene.hit(Ray{Point3{0, 0, 0}, -Vec3::unit_z()}, ahead)->material.get() == gold.get());
 	});
 
 	suite.check("a duplicate material name throws DuplicateNameError and keeps the first", [] {

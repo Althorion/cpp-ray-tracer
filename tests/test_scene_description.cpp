@@ -59,7 +59,7 @@ constexpr double infinity = std::numeric_limits<double>::infinity();
 /// Name of the material hit by `ray` in `scene`, or an empty view on a miss.
 [[nodiscard]] std::string_view material_hit(const Scene& scene, const Ray& ray) {
 	const auto record = scene.hit(ray, Interval{0.001, infinity});
-	return record ? record->material->name() : std::string_view{};
+	return record ? record->material.get().name() : std::string_view{};
 }
 
 void check_properties(Suite& suite) {
@@ -85,7 +85,7 @@ void check_properties(Suite& suite) {
 		const auto record = scene.hit(Ray{origin, -Vec3::unit_x()}, Interval{0.0, infinity});
 		RC_ASSERT(record.has_value());
 		RC_ASSERT(approx_equal(record->t, sphere.radius, tolerance(distance_from_origin(sphere.centre) + sphere.radius)));
-		RC_ASSERT(record->material->name() == sphere.material);
+		RC_ASSERT(record->material.get().name() == sphere.material);
 	});
 
 	suite.check("a sphere made of an undescribed material throws UnknownNameError", [](SceneDescription description) {

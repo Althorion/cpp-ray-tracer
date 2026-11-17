@@ -46,7 +46,7 @@ public:
 	/// The light carried back along `ray`, following at most `max_depth` surface interactions: the sky colour
 	/// filtered by every attenuation on the way, or black if the light is absorbed or the depth runs out.
 	///
-	/// @throws Error if a surface hit has no material.
+	/// @throws MathsError if a computation along the path exceeds the range of `double`.
 	[[nodiscard]] Colour trace(Ray ray, Sampler& sampler) const;
 
 	/// Nearest distance along a ray at which a hit counts: a little above zero, so that a scattered ray does not hit
